@@ -38,6 +38,26 @@ Open `index.html` in Chrome 157 or later. `preview.png` is only the image shown 
 
 Example: [Languages since 2007, in 3D](https://iantpe.github.io/hn-topic-race/?cat=langHist&view=3d).
 
+## Make your own
+
+Fork or clone it; the page is one file, [`index.html`](index.html), and there is nothing to build.
+
+**Just want other terms?** No code needed: pick Custom on the page, or share a link such as `?terms=rust,zig&m=60&w=3`.
+
+**Change a category:** edit its terms in `CATEGORIES` in `index.html` (up to 15), then run `npm run snapshot`.
+
+**Add a category**, four places in `index.html`:
+
+1. a line in `CATEGORIES`, for example `shell: ["zsh", "nushell"],`
+2. an `<input type="radio" name="category" value="shell">` next to the others
+3. its name in `cats`, once in English and once in Chinese
+
+Then run `npm run snapshot` to fill in its numbers.
+
+**Change a long race:** edit the terms and rules in `scripts/history.mjs`, then run `npm run history`.
+
+**Publish it:** on GitHub, Settings → Pages → Deploy from a branch → `main`, `/ (root)`. Replace the three `iantpe.github.io` addresses at the top of `index.html` with yours, and point the two "Source code" links at your repository.
+
 ## How the drawing works
 
 1. `<canvas content="drawable">` lays out its children. Each row is an `<li drawable>` with a link, a bar and a value.

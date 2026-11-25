@@ -50,6 +50,7 @@ const path = require("node:path");
   await q.addInitScript(() => { delete HTMLCanvasElement.prototype.content; delete CanvasRenderingContext2D.prototype.drawElementImage; });
   await q.goto(PAGE); await q.waitForTimeout(300); await q.click("[data-set-lang=zh]");
   ok("unsupported: explanation instead of the chart", await q.isVisible(".nope") && !(await q.isVisible("#canvas")) && !(await q.isVisible("#customForm")) && /還不支援/.test(await q.innerText(".nope")));
+  ok("unsupported: source code is still linked", await q.isVisible('.nope a[href$="ianTPE/hn-topic-race"]') && await q.innerText('.nope a[href$="ianTPE/hn-topic-race"]') === "原始碼");
   ok("unsupported: no errors, no requests", e2.length === 0 && net === 0, e2);
   await b.close();
 })().catch(e => { console.error(e); process.exit(1); });
