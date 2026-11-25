@@ -253,8 +253,8 @@
     <time class="c-month" id="cMonth" drawable></time>
     <a class="c-badge" id="cBadge" drawable href="https://github.com/WICG/html-in-canvas" target="_blank" rel="noopener">HTML-in-Canvas</a>
     <div class="c-news" id="cNews" drawable hidden><div><p></p><p></p></div></div>
-    <ul class="rows" id="rows"></ul>
-    <div id="ticks" aria-hidden="true"></div>
+    <ul class="rows" id="rows" drawable></ul>
+    <div id="ticks" drawable aria-hidden="true"></div>
     <div class="years" id="years" drawable aria-hidden="true"></div>
     <input class="seek" id="seek" type="range" drawable min="0" step="any" value="0" autocomplete="off" aria-label="Month" data-zh-label="月份">
   </canvas>
@@ -1384,6 +1384,7 @@ function render(p, snap = false) {
   const at = p * (labels.length - 1), news = takeovers.findLast(n => n.at <= at);
   const age = news ? (at - news.at) / (labels.length - 1) * duration : NEWS_MS;
   const newsAlpha = Math.max(0, Math.min(1, age / 300, (NEWS_MS - age) / 500));
+  if (!newsAlpha && !$("cNews").hidden) surface.clearElementGeometry($("cNews"));     // 收起來就不再接點擊
   $("cNews").hidden = !newsAlpha;
   if (newsAlpha) {
     const [when, what] = $("cNews").querySelectorAll("p"), short = d => d.name.split(" / ")[0];
@@ -1396,10 +1397,19 @@ function render(p, snap = false) {
   surface.requestPaint();
 }
 
+// 元素還沒有繪製紀錄時會丟 InvalidStateError：跳過這一格，請瀏覽器再給一次 paint
+function painted(c, draw) {
+  try { draw(); return true; }
+  catch (e) {
+    if (e.name !== "InvalidStateError") throw e;
+    c.requestPaint();
+    return false;
+  }
+}
 // 畫一個元素：x、y、w、h 用設計座標；m 是往外多畫的邊，光暈才不會被裁掉
 function put(node, x, y, w, h, m = 0) {
   const g = canvas.width / W;
-  ctx.drawElementImage(node, -m, -m, w + m * 2, h + m * 2, (x - m) * g, (y - m) * g, (w + m * 2) * g, (h + m * 2) * g);
+  painted(canvas, () => ctx.drawElementImage(node, -m, -m, w + m * 2, h + m * 2, (x - m) * g, (y - m) * g, (w + m * 2) * g, (h + m * 2) * g));
 }
 // 快照在這個事件之前剛更新，這裡畫的會出現在同一幀；drawElementImage() 也會把點擊、選取、無障礙的位置同步到畫出來的地方
 if (LIVE) canvas.onpaint = () => {
@@ -1598,24 +1608,23 @@ function paintScene(changed) {
 
   // 一個 HTML 元素：只有變了才重傳貼圖；畫完把同一個矩陣交給瀏覽器，點擊、選字、報讀器才對得到
   const place = (node, base, x, y, w, h, margin = 0, alpha = 1) => {
-    const tw = Math.ceil((w + margin * 2) * g * 1.5), th = Math.ceil((h + margin * 2) * g * 1.5);   // 斜看會放大，多取 1.5 倍
+    // 尺寸 = 元素加邊框後的畫布格數。指南是量 captureElementImage().width，但 Chrome 158 的 ElementImage 還沒有這個屬性
+    const tw = Math.ceil((w + margin * 2) * g), th = Math.ceil((h + margin * 2) * g);
     let t = tex.get(node);
-    if (!t || t.w !== tw || t.h !== th) {
-      if (t) gl.deleteTexture(t.id);
-      t = { id: gl.createTexture(), w: tw, h: th };
-      tex.set(node, t);
-      gl.bindTexture(gl.TEXTURE_2D, t.id);
-      gl.texStorage2D(gl.TEXTURE_2D, Math.floor(Math.log2(Math.max(tw, th))) + 1, gl.RGBA8, tw, th);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    if (!t) tex.set(node, t = { id: gl.createTexture() });
+    gl.bindTexture(gl.TEXTURE_2D, t.id);
+    if (t.w !== tw || t.h !== th) {
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, tw, th, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       if (aniso) gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, 8);
-      dirty.add(node);
+      t.w = tw; t.h = th; t.stale = true;
     }
-    gl.bindTexture(gl.TEXTURE_2D, t.id);
-    if (dirty.has(node)) {
-      gl.texElementSubImage2D(gl.TEXTURE_2D, 0, 0, 0, node, { sx: -margin, sy: -margin, swidth: w + margin * 2, sheight: h + margin * 2, width: tw, height: th });
-      gl.generateMipmap(gl.TEXTURE_2D);
+    if (t.stale || dirty.has(node)) {
+      const image = { sx: -margin, sy: -margin, swidth: w + margin * 2, sheight: h + margin * 2, width: tw, height: th };
+      t.stale = !painted(c, () => gl.texElementSubImage2D(gl.TEXTURE_2D, 0, 0, 0, node, image));
+      if (t.stale) return;
     }
     const m = base.translate(x, y);
     draw(0, m.translate(-margin, -margin).scale(w + margin * 2, h + margin * 2, 1), [0, 0, 0, alpha]);
