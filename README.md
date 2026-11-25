@@ -19,12 +19,24 @@ One HTML file. No backend, no build step, no external scripts or fonts. Opening 
 - **Compare your own terms**: up to 15, counted live through the [HN Search API](https://hn.algolia.com/api) and cached in your browser.
 - **Check the numbers**: "Spot-check hits" lists the HN items behind a count, with links.
 - **Fixed or dynamic axis**: one scale for the whole period by default; turn on Dynamic axis and the scale follows the leaders.
+- **Share a link**: the address follows the chart. See [Links](#links).
 - **Export a video**: 1920×1080 on desktop, portrait on phones.
 - English and Traditional Chinese; follows your light/dark setting.
 
 ## Run it
 
 Open `index.html` in Chrome 157 or later. `preview.png` is only the image shown when the link is shared; the page does not load it.
+
+## Links
+
+| Parameter | Meaning |
+|---|---|
+| `cat=langHist` | a preset: `model`, `ai`, `lang`, `db`, `frontend`, `editor`, `cloud`, `infra`, `langHist`, `waveHist`, `hireHist` |
+| `terms=rust,zig&m=60&w=3` | your own terms, months, rolling window. Nothing is fetched until the reader presses "Fetch data" |
+| `view=3d` | open in 3D |
+| `axis=dynamic` | dynamic axis |
+
+Example: [Languages since 2007, in 3D](https://iantpe.github.io/hn-topic-race/?cat=langHist&view=3d).
 
 ## How the drawing works
 

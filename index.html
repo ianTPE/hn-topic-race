@@ -50,9 +50,9 @@
   .lang button[aria-pressed=true] { background:var(--ink); color:var(--bg); }
   .lang button[aria-pressed=true]:focus-visible { outline-color:var(--bg); }
 
-  .cats { display:flex; flex-wrap:wrap; gap:8px; margin:0; padding:0; border:0; min-width:0; }
+  .cats { display:flex; flex-wrap:wrap; gap:4px 8px; margin:0; padding:0; border:0; min-width:0; }
   .cats legend { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
-  .cats .br { flex-basis:100%; margin-block-start:-8px; }                      /* 長期資料與自訂另起一行 */
+  .cats .br { flex-basis:100%; }                      /* 長期資料與自訂另起一行 */
   .cats label { position:relative; display:inline-flex; align-items:center; min-block-size:36px; padding:0 14px; border-radius:18px;
                 font-size:14px; color:var(--ink-2); background:var(--panel); box-shadow:inset 0 0 0 1px var(--line); cursor:pointer;
                 transition:color 120ms, box-shadow 120ms; }
@@ -146,6 +146,11 @@
   .axis input:focus-visible { outline-color:var(--stage-ink); }
   .axis:has(:disabled) { opacity:.45; cursor:not-allowed; }
   .transport svg { width:16px; height:16px; flex:none; fill:currentColor; }
+  .copy { position:relative; display:inline-flex; }
+  #share:not([data-copied]) .i-done, #share[data-copied] .i-link { display:none; }
+  .tip { position:absolute; inset-block-end:calc(100% + 8px); inset-inline-end:0; z-index:3; padding:5px 10px; border-radius:6px; background:var(--stage-ink); color:var(--stage);
+         font-size:13px; font-weight:600; white-space:nowrap; pointer-events:none; transition:opacity 160ms; }
+  .tip:empty { opacity:0; padding-inline:0; }
   #play[data-state=playing] .i-play, #play[data-state=paused] .i-pause { display:none; }
   button:active:not(:disabled) { scale:.97; }
   button:disabled { opacity:.45; cursor:not-allowed; }
@@ -267,7 +272,8 @@
       <input id="dynAxis" type="checkbox" switch autocomplete="off"><span data-zh="動態縮放">Dynamic axis</span></label>
     <label class="axis" title="Draws the same HTML onto 3D bars. Drag empty space to rotate, double-click to reset. For comparing lengths, 2D is more accurate." data-zh-title="把同一批 HTML 畫到立體長條上。拖曳空白處轉視角，雙擊回正。要比長短，2D 比較準。">
       <input id="mode3d" type="checkbox" switch autocomplete="off"><span>3D</span></label>
-    <button id="download" type="button" class="push"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M7.2 1.5h1.6v7l2.6-2.6 1.1 1.1L8 11.5 3.5 7l1.1-1.1 2.6 2.6zM2 13h12v1.6H2z"/></svg><span data-zh="下載影片">Download video</span></button>
+    <span class="copy push"><button id="share" type="button"><svg viewBox="0 0 16 16" aria-hidden="true"><path class="i-link" d="M6.6 9.4a.8.8 0 0 1 0-1.1l3.2-3.2 1.1 1.1-3.2 3.2a.8.8 0 0 1-1.1 0zM8.2 4.1l1.5-1.5a2.6 2.6 0 0 1 3.7 3.7l-1.5 1.5-1.1-1.1 1.5-1.5a1 1 0 0 0-1.5-1.5L9.300 5.200zM7.800 11.900l-1.500 1.500a2.600 2.600 0 0 1-3.700-3.700l1.500-1.500 1.100 1.100-1.500 1.500a1 1 0 0 0 1.500 1.500l1.500-1.500z"/><path class="i-done" d="M6.4 11.9 2.6 8.100l1.200-1.200 2.600 2.600 5.800-5.800 1.200 1.200z"/></svg><span data-zh="複製連結">Copy link</span></button><span class="tip" id="shareTip" role="status"></span></span>
+    <button id="download" type="button"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M7.2 1.5h1.6v7l2.6-2.6 1.1 1.1L8 11.5 3.5 7l1.1-1.1 2.6 2.6zM2 13h12v1.6H2z"/></svg><span data-zh="下載影片">Download video</span></button>
   </div>
   <figcaption class="try"><span data-zh="上面的每個詞、數字和長條都是活的 HTML，畫在同一個 canvas 裡。拖曳時間軸、點一個詞去看當月的 HN 討論、選取數字、按 Ctrl+F 搜尋，再把同一個畫面下載成影片。打開 3D，還是同一批 HTML，只是貼到了 WebGL 的立體長條上。">Every term, number and bar above is live HTML drawn into one canvas. Drag the timeline, click a term to read that month’s HN threads, select a number, press Ctrl+F, then download the same picture as a video. Switch on 3D and it is still the same HTML, now on WebGL bars.</span>
     <a href="https://github.com/WICG/html-in-canvas" data-zh="什麼是 HTML-in-Canvas？">What is HTML-in-Canvas?</a></figcaption>
@@ -392,6 +398,10 @@ const MSG = {
     chartTitle: "HN Topic Race",
     chartSub: wnd => `Mentions per million HN posts + comments, rolling ${wnd}-month window`,
     jobsSub: wnd => `% of “Who is hiring?” job posts that mention it, rolling ${wnd}-month window`,
+    linkCopied: "Link copied",
+    linkFailed: "Copy failed",
+    linkShow: url => `Copy this link: ${url}`,
+    linkTerms: d => `This link compares ${d.terms} over ${d.months} months. Press “Fetch data” to count them now (about ${pl(d.requests, "request")} to HN’s search API). The chart keeps its current data until then.`,
     newFirst: month => `${month} · new #1`,
     passes: (a, b) => `${a} passes ${b}`,
     axisMoves: "axis rescales with the leaders",
@@ -435,6 +445,10 @@ const MSG = {
     chartTitle: "HN 話題競賽",
     chartSub: wnd => `每百萬則 HN 貼文＋留言中提到的則數，滾動 ${wnd} 個月`,
     jobsSub: wnd => `每 100 篇 HN 徵才文有幾篇提到，滾動 ${wnd} 個月`,
+    linkCopied: "已複製連結",
+    linkFailed: "複製失敗",
+    linkShow: url => `請複製這個連結：${url}`,
+    linkTerms: d => `這個連結要比 ${d.terms}，共 ${d.months} 個月。按「抓資料」才會開始計數（約 ${fmtNum(d.requests)} 次 HN 搜尋 API 請求）。抓到之前，圖上仍是原本的資料。`,
     newFirst: month => `${month} · 換第一`,
     passes: (a, b) => `${a} 超過 ${b}`,
     axisMoves: "數值軸動態縮放",
@@ -1118,6 +1132,8 @@ async function loadData() {
 
   startRace(r.labels, r.data, Wnd, Object.keys(CATEGORIES).find(c => isPreset(c, terms)) ?? null);
   if (chartCat) lastPreset = chartCat;
+  source = { terms, months: S, window: Wnd, exact };
+  syncUrl();
   syncCategory();
   // 抓完時人還停在輸入面板：捲回去，免得圖在畫面外自己播完
   const panel = $("customForm").getBoundingClientRect();
@@ -1661,7 +1677,7 @@ function set3d(on) {
   };
   turning = requestAnimationFrame(step);
 }
-$("mode3d").onchange = e => set3d(e.target.checked);
+$("mode3d").onchange = e => { set3d(e.target.checked); syncUrl(); };
 const clampTilt = () => {
   yaw = Math.min(TILT.yawMax, Math.max(-TILT.yawMax, yaw));
   pitch = Math.min(TILT.pitchMax, Math.max(-TILT.pitchMax, pitch));
@@ -1697,6 +1713,7 @@ $("gl").addEventListener("webglcontextlost", e => {
   $("mode3d").checked = false;
   useSurface(canvas);
   turned();
+  syncUrl();
 });
 $("gl").addEventListener("webglcontextrestored", () => { scene = null; });
 
@@ -1745,7 +1762,7 @@ function pause() {
 
 $("play").onclick = () => (playing ? pause() : play());
 $("replay").onclick = () => { pause(); progress = 0; phase = "run"; render(0, true); play(); };
-$("dynAxis").onchange = () => render(progress);
+$("dynAxis").onchange = () => { render(progress); syncUrl(); };
 
 // -------- 時間軸拖曳 --------
 // 暫停時換月份：長條滑到新名次就停，不必一直重畫
@@ -1981,6 +1998,74 @@ $("download").onclick = () => {
   });
 };
 
+// -------- 網址分享 --------
+// 網址跟著畫面走：?cat=langHist、?terms=rust,zig&m=60&w=3、&view=3d、&axis=dynamic。預設狀態不帶參數
+let source = { cat: "model" };            // 圖上這份資料怎麼來的
+const URL_KEYS = ["cat", "terms", "m", "w", "exact", "view", "axis"];
+function shareUrl() {
+  const u = new URL(location.href), q = u.searchParams;
+  for (const k of URL_KEYS) q.delete(k);
+  if (source.terms) {
+    q.set("terms", source.terms.map(fmtTerm).join(","));
+    q.set("m", source.months);
+    q.set("w", source.window);
+    if (!source.exact) q.set("exact", "0");
+  } else if (source.cat !== "model") q.set("cat", source.cat);
+  if ($("mode3d").checked) q.set("view", "3d");
+  if ($("dynAxis").checked) q.set("axis", "dynamic");
+  u.search = q.toString().replaceAll("%2C", ",");      // 逗號不必編碼，網址才好讀
+  return u.href;
+}
+function syncUrl() {
+  try { history.replaceState(history.state, "", shareUrl()); } catch {}
+}
+// 打開分享的連結。自訂詞要連 HN 的搜尋 API，等讀的人自己按「抓資料」，開頁仍是零請求
+function openUrl() {
+  const q = new URLSearchParams(location.search), has = (sel, v) => [...$(sel).options].some(o => o.value === v);
+  const cat = q.get("cat"), list = (q.get("terms") ?? "").slice(0, 400);
+  $("dynAxis").checked = q.get("axis") === "dynamic";
+  loadSnapshot(cat !== "custom" && [...document.querySelectorAll("input[name=category]")].some(i => i.value === cat) ? cat : "model");
+  $("terms").value = list;
+  const terms = list ? parseTerms() : [];
+  if (terms.length) {
+    if (has("months", q.get("m"))) $("months").value = q.get("m");
+    if (has("window", q.get("w"))) $("window").value = q.get("w");
+    $("exact").checked = q.get("exact") !== "0";
+    const months = +$("months").value, wnd = +$("window").value;
+    source = { terms, months, window: wnd, exact: $("exact").checked };
+    category.value = "custom";
+    customDraft = $("terms").value = termsToInput(terms);
+    setStatus(() => msg("linkTerms", { terms: termsToInput(terms), months, requests: (months + wnd - 1) * (terms.length + 1) }));
+    $("load").focus({ preventScroll: true });
+    scrollToEl($("status"));
+  } else $("terms").value = termsToInput(presetTerms(source.cat));
+  const strip = $("category"), chip = strip.querySelector("label:has(:checked)");      // 手機的類別列要左右滑：選中的那個捲進畫面
+  strip.scrollLeft = chip.offsetLeft - strip.offsetLeft - (strip.clientWidth - chip.offsetWidth) / 2;
+  if (q.get("view") === "3d") { $("mode3d").checked = true; set3d(true); }
+  syncUrl();
+}
+let tipTimer = 0, lastTip = "";
+function showTip(text) {
+  clearTimeout(tipTimer);
+  if (text === lastTip) text += "\u00A0";             // 同一句連著出現，報讀器會略過
+  lastTip = text;
+  $("shareTip").textContent = "";
+  requestAnimationFrame(() => { $("shareTip").textContent = text; });
+  tipTimer = setTimeout(() => { $("shareTip").textContent = ""; $("share").removeAttribute("data-copied"); }, 2000);
+}
+$("share").onclick = async () => {
+  const url = shareUrl();
+  try {
+    await navigator.clipboard.writeText(url);
+    $("share").setAttribute("data-copied", "");
+    showTip(msg("linkCopied"));
+  } catch {                                            // 剪貼簿被擋：把連結寫出來，讓人自己複製
+    $("share").removeAttribute("data-copied");
+    showTip(msg("linkFailed"));
+    setStatus(() => msg("linkShow", url));
+  }
+};
+
 // -------- 載入內嵌的離線快照（0 次 API 請求）--------
 function loadSnapshot(cat) {
   const long = HISTORY.sets[cat], src = long ? { ...HISTORY, ...long } : SNAPSHOT;
@@ -1995,6 +2080,8 @@ function loadSnapshot(cat) {
   startRace(src.labels.slice(),
     terms.map((name, i) => ({ name, color: PALETTE[i % PALETTE.length], values: series[name].slice() })),
     src.window, cat);
+  source = { cat };
+  syncUrl();
   setStatus(() => msg(!long ? "snapshot" : long.unit ?? "history", {
     date: src.generatedAt.slice(0, 10), terms: terms.length, months: src.labels.length, wnd: src.window
   }));
@@ -2006,7 +2093,7 @@ $("demoBtn").onclick = () => loadSnapshot(presetTerms(category.value).length ? c
 for (const el of document.querySelectorAll("[data-snap]"))
   el.textContent = el.dataset.snap === "date" ? SNAPSHOT.generatedAt.slice(0, 10) : SNAPSHOT.labels[0];
 for (const el of document.querySelectorAll("[data-hist]")) el.textContent = HISTORY.generatedAt.slice(0, 10);
-if (LIVE) loadSnapshot("model");
+if (LIVE) openUrl();
 applyLang();
 </script>
 </html>
