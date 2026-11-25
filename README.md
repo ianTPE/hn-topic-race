@@ -2,6 +2,10 @@
 
 A bar chart race of what Hacker News talks about: mentions per million posts and comments, month by month, over five years.
 
+**[Open the live page](https://iantpe.github.io/hn-topic-race/)**
+
+[![Bar chart race frame ranking LLM names by Hacker News mentions](preview.png)](https://iantpe.github.io/hn-topic-race/)
+
 One HTML file. No backend, no build step, no external scripts or fonts. Opening the page makes no network requests: the eight preset categories play from a snapshot embedded in the file.
 
 - **Compare your own terms**: up to 15, counted live through the [HN Search API](https://hn.algolia.com/api) and cached in your browser.
@@ -11,7 +15,7 @@ One HTML file. No backend, no build step, no external scripts or fonts. Opening 
 
 ## Run it
 
-Open `index.html` in a browser.
+Open `index.html` in a browser. `preview.png` is only the image shown when the link is shared; the page does not load it.
 
 ## How mentions are counted
 
@@ -30,6 +34,8 @@ npm run snapshot
 ```
 
 This runs the page's own counting code under Node (22 or newer) and rewrites only the block between `SNAPSHOT:BEGIN` and `SNAPSHOT:END` in `index.html`. A first run sends about 6,450 requests and takes about 15 minutes; the API allows 10,000 requests per hour per IP. Finished months are cached in `scripts/snapshot.cache.json` for 30 days. If any request fails, nothing is written; run it again to fill the gaps.
+
+Then run `npm run preview` to redraw `preview.png` from the new data.
 
 ## Tests
 
