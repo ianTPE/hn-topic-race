@@ -6,7 +6,7 @@ A bar chart race of what Hacker News talks about: mentions per million posts and
 
 [![Bar chart race frame ranking LLM names by Hacker News mentions](preview.png)](https://iantpe.github.io/hn-topic-race/)
 
-**Needs Chrome 157 or later.** Every term, number and bar is live HTML drawn into one `<canvas>` with [HTML-in-Canvas](https://github.com/WICG/html-in-canvas). That gives one picture two things that used to exclude each other:
+**Needs Chrome 157 or later, or a current version of Edge.** Every term, number and bar is live HTML drawn into one `<canvas>` with [HTML-in-Canvas](https://github.com/WICG/html-in-canvas). That gives one picture two things that used to exclude each other:
 
 - It behaves like HTML: drag the timeline (a native `<input type="range">`), click a term to read that month's HN threads, select a number, press Ctrl+F, tab through the rows, use a screen reader.
 - It behaves like a canvas: `captureStream()` records the same pixels, CSS gradients and glow included, straight to a video.
@@ -25,7 +25,7 @@ One HTML file. No backend, no build step, no external scripts or fonts. Opening 
 
 ## Run it
 
-Open `index.html` in Chrome 157 or later. `preview.png` is only the image shown when the link is shared; the page does not load it.
+Open `index.html` in Chrome 157 or later, or a current version of Edge. `preview.png` is only the image shown when the link is shared; the page does not load it.
 
 ## Links
 

@@ -4,12 +4,12 @@
 <title data-zh="HN 話題長條圖競賽">HN Topic Bar Chart Race</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<meta name="description" content="Five years of Hacker News attention as a bar chart race. Every bar is live HTML drawn into a canvas with HTML-in-Canvas (Chrome 157+): click it, select it, record it.">
+<meta name="description" content="Five years of Hacker News attention as a bar chart race. Every bar is live HTML drawn into a canvas with HTML-in-Canvas (Chrome 157+ or Edge): click it, select it, record it.">
 <link rel="canonical" href="https://iantpe.github.io/hn-topic-race/">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2310161f'/%3E%3Cpath fill='%23f35958' d='M6 7h20v5H6z'/%3E%3Cpath fill='%2303a4cd' d='M6 14h14v5H6z'/%3E%3Cpath fill='%2358ad19' d='M6 21h8v5H6z'/%3E%3C/svg%3E">
 <meta property="og:type" content="website">
 <meta property="og:title" content="HN Topic Bar Chart Race">
-<meta property="og:description" content="Five years of Hacker News attention as a bar chart race. Every bar is live HTML drawn into a canvas with HTML-in-Canvas (Chrome 157+): click it, select it, record it.">
+<meta property="og:description" content="Five years of Hacker News attention as a bar chart race. Every bar is live HTML drawn into a canvas with HTML-in-Canvas (Chrome 157+ or Edge): click it, select it, record it.">
 <meta property="og:url" content="https://iantpe.github.io/hn-topic-race/">
 <meta property="og:image" content="https://iantpe.github.io/hn-topic-race/preview.png">
 <meta property="og:image:width" content="1200">
@@ -220,7 +220,7 @@
     <p class="lead" data-lang="zh" lang="zh-Hant" hidden>每個長條是滾動窗口內、每百萬則 Hacker News 貼文＋留言中提到該詞的則數。比的是佔比，HN 本身的成長不影響結果。</p>
   </div>
   <div class="tools">
-  <a class="hic" href="https://github.com/WICG/html-in-canvas">HTML-in-Canvas · Chrome 157+</a>
+  <a class="hic" href="https://github.com/WICG/html-in-canvas">HTML-in-Canvas · Chrome, Edge</a>
   <div class="lang" id="lang" role="group" aria-label="Language" data-zh-label="語言">
     <button type="button" data-set-lang="en" lang="en" aria-pressed="true">EN</button>
     <button type="button" data-set-lang="zh" lang="zh-Hant" aria-pressed="false">中文</button>
@@ -262,7 +262,7 @@
   </div>
   <div class="nope">
     <h2 data-zh="你的瀏覽器還不支援 HTML-in-Canvas">Your browser can’t draw HTML into a canvas yet</h2>
-    <p data-zh="這張圖的每個字、每條長條都是真的 HTML，直接畫進 canvas：點得到、選得到、搜尋得到，還能錄成影片。目前 Chrome 157 以上看得到。">Every word and bar in this chart is real HTML drawn into a canvas: you can click it, select it, find it with Ctrl+F, and record it as video. Today that works in Chrome 157 and later.</p>
+    <p data-zh="這張圖的每個字、每條長條都是真的 HTML，直接畫進 canvas：點得到、選得到、搜尋得到，還能錄成影片。目前 Chrome 157 以上和新版 Edge 看得到。">Every word and bar in this chart is real HTML drawn into a canvas: you can click it, select it, find it with Ctrl+F, and record it as video. Today that works in Chrome 157 and later, and in current versions of Edge.</p>
     <p><a href="https://github.com/WICG/html-in-canvas" data-zh="這是什麼">What it is</a> · <a href="https://github.com/mozilla/standards-positions/issues/1076" data-zh="Firefox 的討論">Firefox discussion</a> · <a href="https://github.com/WebKit/standards-positions/issues/630" data-zh="Safari（WebKit）的討論">Safari (WebKit) discussion</a> · <a href="https://github.com/ianTPE/hn-topic-race" data-zh="原始碼">Source code</a></p>
   </div>
   <div class="transport">
@@ -365,7 +365,7 @@
 const $ = id => document.getElementById(id);
 const canvas = $("canvas");
 const ctx = canvas.getContext("2d");
-// 需要 HTML-in-Canvas（Chrome 157+）；沒有的瀏覽器只顯示說明
+// 需要 HTML-in-Canvas（Chrome 157+、新版 Edge）；沒有的瀏覽器只顯示說明
 const LIVE = (() => {
   const c = document.createElement("canvas");
   c.setAttribute("content", "drawable");
