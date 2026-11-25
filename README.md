@@ -8,7 +8,7 @@ A bar chart race of what Hacker News talks about: mentions per million posts and
 
 **Needs Chrome 157 or later.** Every term, number and bar is live HTML drawn into one `<canvas>` with [HTML-in-Canvas](https://github.com/WICG/html-in-canvas). That gives one picture two things that used to exclude each other:
 
-- It behaves like HTML: click a term to read that month's HN threads, select a number, press Ctrl+F, tab through the rows, use a screen reader.
+- It behaves like HTML: drag the timeline (a native `<input type="range">`), click a term to read that month's HN threads, select a number, press Ctrl+F, tab through the rows, use a screen reader.
 - It behaves like a canvas: `captureStream()` records the same pixels, CSS gradients and glow included, straight to a video.
 
 Other browsers show a short explanation instead of the chart, with links to the [Firefox](https://github.com/mozilla/standards-positions/issues/1076) and [Safari](https://github.com/WebKit/standards-positions/issues/630) discussions. There is deliberately no fallback renderer.

@@ -93,6 +93,17 @@
   @media (hover: hover) { .rows:has(.row:hover) .row:not(:hover) > * { opacity:.42; } }
   canvas.compact .rank { display:none; }
   .tick { display:block; inline-size:80px; text-align:center; font:400 var(--tick-fs)/1.4 var(--mono); color:#8794a3; }
+  /* 時間軸就是原生的 range：左右各多半個拇指寬，拇指中心才會對準刻度 */
+  .seek { --thumb:18px; --track:4px; --at:0; appearance:none; display:block; inline-size:calc(var(--cw) - var(--pad) * 2 + var(--thumb)); block-size:40px;
+          margin:0; padding:0; border:0; border-radius:20px; background:none; cursor:pointer; touch-action:pan-y; }
+  .seek::-webkit-slider-runnable-track { block-size:var(--track);
+          background:linear-gradient(to right, #dfe5eb calc(var(--at) * 100%), #66727f 0) no-repeat center / calc(100% - var(--thumb)) 100%; }
+  .seek::-webkit-slider-thumb { appearance:none; inline-size:var(--thumb); block-size:var(--thumb); margin-block-start:calc((var(--track) - var(--thumb)) / 2);
+          border:0; border-radius:50%; background:#f2f5f8; box-shadow:0 0 0 3px var(--stage); transition:box-shadow 120ms; }
+  .seek:hover:enabled::-webkit-slider-thumb, .seek:active:enabled::-webkit-slider-thumb { box-shadow:0 0 0 3px var(--stage), 0 0 0 9px rgb(255 255 255 / .18); }
+  .seek:focus-visible { outline:none; }             /* 外框畫在拇指上，不壓到年份 */
+  .seek:focus-visible::-webkit-slider-thumb { outline:2px solid #35c99a; outline-offset:3px; }
+  canvas.compact .seek { --thumb:26px; --track:6px; block-size:64px; border-radius:32px; }
   .years { position:relative; inline-size:var(--cw); block-size:24px; font:400 var(--tick-fs)/24px var(--mono); color:#8794a3; }
   .years span { position:absolute; inline-size:60px; margin-inline-start:-30px; text-align:center; }
   .try { padding:12px 18px 14px; font-size:14px; line-height:1.55; color:#a3afbc; background:var(--stage-2); border-top:1px solid var(--stage-line); text-wrap:pretty; }
@@ -217,6 +228,7 @@
     <ul class="rows" id="rows"></ul>
     <div id="ticks" aria-hidden="true"></div>
     <div class="years" id="years" drawable aria-hidden="true"></div>
+    <input class="seek" id="seek" type="range" drawable min="0" step="any" value="0" autocomplete="off" aria-label="Month" data-zh-label="月份">
   </canvas>
   <div class="nope">
     <h2 data-zh="你的瀏覽器還不支援 HTML-in-Canvas">Your browser can’t draw HTML into a canvas yet</h2>
@@ -230,7 +242,7 @@
       <input id="dynAxis" type="checkbox" switch autocomplete="off"><span data-zh="動態縮放">Dynamic axis</span></label>
     <button id="download" type="button" class="push"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M7.2 1.5h1.6v7l2.6-2.6 1.1 1.1L8 11.5 3.5 7l1.1-1.1 2.6 2.6zM2 13h12v1.6H2z"/></svg><span data-zh="下載影片">Download video</span></button>
   </div>
-  <figcaption class="try"><span data-zh="上面的每個詞、數字和長條都是活的 HTML，畫在同一個 canvas 裡。點一個詞去看當月的 HN 討論、選取數字、按 Ctrl+F 搜尋，再把同一個畫面下載成影片。">Every term, number and bar above is live HTML drawn into one canvas. Click a term to read that month’s HN threads, select a number, press Ctrl+F, then download the same picture as a video.</span>
+  <figcaption class="try"><span data-zh="上面的每個詞、數字和長條都是活的 HTML，畫在同一個 canvas 裡。拖曳時間軸、點一個詞去看當月的 HN 討論、選取數字、按 Ctrl+F 搜尋，再把同一個畫面下載成影片。">Every term, number and bar above is live HTML drawn into one canvas. Drag the timeline, click a term to read that month’s HN threads, select a number, press Ctrl+F, then download the same picture as a video.</span>
     <a href="https://github.com/WICG/html-in-canvas" data-zh="什麼是 HTML-in-Canvas？">What is HTML-in-Canvas?</a></figcaption>
 </figure>
 <p id="status" role="status"></p>
@@ -280,7 +292,7 @@
   <dt>Missing data</dt>
   <dd>failed requests are retried (with extra backoff on 429). If a month still fails, it is dropped from both numerator and denominator, so it can’t create a fake spike or crash. If an entire window has no data, the value is linearly interpolated from its nearest valid neighbors.</dd>
   <dt>HTML-in-Canvas</dt>
-  <dd>the canvas has <code>content="drawable"</code>, and each row, the title, the month and the axis labels are real HTML elements marked <code>drawable</code>. In the <code>paint</code> event, <code>drawElementImage()</code> draws their latest snapshots, next to grid lines drawn with plain Canvas 2D. Clicks, text selection, find-in-page and screen readers keep working at the drawn positions, and <code>captureStream()</code> records the same pixels with their CSS. Plain HTML can’t be recorded this way, and plain canvas text can’t be selected.</dd>
+  <dd>the canvas has <code>content="drawable"</code>, and each row, the title, the month, the axis labels and the timeline (a native <code>&lt;input type="range"&gt;</code>) are real HTML elements marked <code>drawable</code>. In the <code>paint</code> event, <code>drawElementImage()</code> draws their latest snapshots, next to grid lines drawn with plain Canvas 2D. Clicks, text selection, find-in-page and screen readers keep working at the drawn positions, and <code>captureStream()</code> records the same pixels with their CSS. Plain HTML can’t be recorded this way, and plain canvas text can’t be selected.</dd>
   <dt>Axis</dt>
   <dd>by default one fixed scale covers the whole period, so bar lengths compare across months. With “Dynamic axis” on, the scale follows the current leaders so early, smaller numbers stay readable; bars still start at zero, but their lengths then compare only within one month, so across months read the axis and the numbers.</dd>
   <dt>Note</dt>
@@ -297,7 +309,7 @@
   <dt>缺資料的處理</dt>
   <dd>抓取失敗會重試（429 特別退避）；仍失敗的月份，該月會同時從分子與分母移除，因此不會出現假的尖峰或暴跌。若整個窗口都沒有可用資料，會以前後最近的有效值做線性內插。</dd>
   <dt>HTML-in-Canvas</dt>
-  <dd>畫布設了 <code>content="drawable"</code>，每一列、標題、月份和刻度都是標了 <code>drawable</code> 的真實 HTML 元素。在 <code>paint</code> 事件裡用 <code>drawElementImage()</code> 畫出它們最新的快照，格線則照舊用 Canvas 2D 畫。點擊、選字、頁內搜尋、螢幕報讀器都會對準畫出來的位置，<code>captureStream()</code> 也能連同 CSS 效果一起錄下來。一般 HTML 沒辦法這樣錄影，一般 canvas 的字則選不到。</dd>
+  <dd>畫布設了 <code>content="drawable"</code>，每一列、標題、月份、刻度和時間軸（原生的 <code>&lt;input type="range"&gt;</code>）都是標了 <code>drawable</code> 的真實 HTML 元素。在 <code>paint</code> 事件裡用 <code>drawElementImage()</code> 畫出它們最新的快照，格線則照舊用 Canvas 2D 畫。點擊、選字、頁內搜尋、螢幕報讀器都會對準畫出來的位置，<code>captureStream()</code> 也能連同 CSS 效果一起錄下來。一般 HTML 沒辦法這樣錄影，一般 canvas 的字則選不到。</dd>
   <dt>數值軸</dt>
   <dd>預設整段期間用同一個固定比例，不同月份的長條可以直接比長短。開啟「動態縮放」後，比例跟著當時的領先者走，早期的小數字也看得清楚；長條仍從零開始，但長短只能在同一個月內互比，跨月份請看刻度與數字。</dd>
   <dt>注意</dt>
@@ -320,7 +332,7 @@ if (!LIVE) document.documentElement.className = "no-hic";
 // 設計座標：桌面 16:9；手機改直式，字才看得清楚。影片是設計座標的 1.5 倍（桌面 1920×1080）
 const COMPACT = matchMedia("(max-width: 640px)").matches;
 const W = COMPACT ? 640 : 1280, H = COMPACT ? 800 : 720, VIDEO_SCALE = 1.5;
-const INK = { bg: "#10161f", hi: "#f2f5f8", low: "#8794a3", line: "#212b38" };
+const INK = { bg: "#10161f", low: "#8794a3", line: "#212b38" };
 
 // 類別是一組單選鈕（不是 select）
 const category = {
@@ -444,7 +456,7 @@ for (const b of document.querySelectorAll("[data-set-lang]")) b.onclick = () => 
 // 錄影中鎖住語言、數值軸與播放，避免影片中途變樣
 function lockLang(locked) {
   for (const b of document.querySelectorAll("[data-set-lang]")) b.disabled = locked;
-  for (const id of ["dynAxis", "play", "replay"]) $(id).disabled = locked;
+  for (const id of ["dynAxis", "play", "replay", "seek"]) $(id).disabled = locked;
 }
 
 // -------- 類別（已消歧、已稽核）--------
@@ -1121,6 +1133,7 @@ function buildRows() {
     d.month = null;
     return row;
   }));
+  $("seek").max = labels.length - 1;
   $("years").replaceChildren(...labels.flatMap((l, i) => {
     if (!l.slice(5).startsWith("01")) return [];        // 每年 1 月標年份
     const y = el("span", "");
@@ -1163,6 +1176,7 @@ function render(p, snap = false) {
   const k = 1 - Math.exp(-lastDt / 90);
   for (const { d, val } of items) {
     const rank = rankOf.get(d), targetY = TOP + rank * ROW_H;
+    d.targetY = targetY;
     if (snap) d.curY = targetY;
     else d.curY += (targetY - d.curY) * k;
     d.curVal = val;
@@ -1189,8 +1203,12 @@ function render(p, snap = false) {
   setText(sub, COMPACT || !note ? base : `${base} · ${note}`);
   setText(moves, COMPACT ? note : "");
   setText($("cMonth"), month);
+  const seek = $("seek");
+  seek.value = p * (labels.length - 1);
+  seek.style.setProperty("--at", p);
+  if (seek.getAttribute("aria-valuetext") !== month) seek.setAttribute("aria-valuetext", month);
 
-  view = { p, max, ticks: setTicks(axisTicks(max)) };
+  view = { max, ticks: setTicks(axisTicks(max)) };
   canvas.requestPaint();
 }
 
@@ -1202,12 +1220,12 @@ function put(node, x, y, w, h, m = 0) {
 // 快照在這個事件之前剛更新，這裡畫的會出現在同一幀；drawElementImage() 也會把點擊、選取、無障礙的位置同步到畫出來的地方
 if (LIVE) canvas.onpaint = () => {
   if (!view) return;
-  const { p, max, ticks } = view, g = canvas.width / W;
+  const { max, ticks } = view, g = canvas.width / W;
   ctx.reset();
   ctx.fillStyle = INK.bg;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // 格線與時間軸是純圖形，照舊用 Canvas 2D 畫，和 HTML 疊在同一張畫布上
+  // 格線與年份刻度是純圖形，照舊用 Canvas 2D 畫，和 HTML 疊在同一張畫布上
   ctx.save();
   ctx.scale(g, g);
   ctx.fillStyle = INK.line;
@@ -1216,15 +1234,9 @@ if (LIVE) canvas.onpaint = () => {
     ctx.fillRect(BAR_X + v / max * BAR_MAX - 0.5, TOP - 6, 1, PLOT_BOTTOM - TOP + 6);
   }
   ctx.globalAlpha = 1;
-  const ty = H - 44, x0 = PAD, x1 = W - PAD, px = x0 + (x1 - x0) * p;
-  ctx.fillRect(x0, ty - 1.5, x1 - x0, 3);
+  const ty = H - 44;
   ctx.fillStyle = INK.low;
-  ctx.fillRect(x0, ty - 1.5, px - x0, 3);
   labels.forEach((l, i) => { if (l.slice(5).startsWith("01")) ctx.fillRect(yearX(i) - 0.5, ty + 5, 1, 5); });
-  ctx.fillStyle = INK.bg;
-  ctx.beginPath(); ctx.arc(px, ty, 8, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = INK.hi;
-  ctx.beginPath(); ctx.arc(px, ty, 6, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 
   const size = e => [e.offsetWidth, e.offsetHeight];
@@ -1238,6 +1250,8 @@ if (LIVE) canvas.onpaint = () => {
   ctx.globalAlpha = 1;
   put($("years"), 0, ty + 10, W, 24);
   for (const d of [...data].sort((a, b) => a.curY - b.curY)) put(d.row, 0, d.curY, W, ROW_H, 24);
+  const [sw, sh] = size($("seek"));
+  put($("seek"), (W - sw) / 2, ty - sh / 2, sw, sh);          // 最後畫：點擊判定在最上層
 };
 
 // -------- 播放控制 --------
@@ -1285,6 +1299,48 @@ function pause() {
 $("play").onclick = () => (playing ? pause() : play());
 $("replay").onclick = () => { pause(); progress = 0; phase = "run"; render(0, true); play(); };
 $("dynAxis").onchange = () => render(progress);
+
+// -------- 時間軸拖曳 --------
+// 暫停時換月份：長條滑到新名次就停，不必一直重畫
+let gliding = false;
+function glide() {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) { render(progress, true); return; }
+  if (gliding) return;
+  gliding = true;
+  const step = () => {
+    if (playing || recording) { gliding = false; return; }
+    lastDt = 16.7;
+    render(progress);
+    if (data.some(d => Math.abs(d.curY - d.targetY) > 0.5)) requestAnimationFrame(step);
+    else { gliding = false; render(progress, true); }
+  };
+  requestAnimationFrame(step);
+}
+function seekTo(i) {
+  pause();
+  progress = Math.min(Math.max(i / (labels.length - 1), 0), 1);
+  phase = "run";
+  glide();
+}
+let resume = false;                       // 播放中拖曳：按住時暫停，放開後接著播
+$("seek").oninput = e => seekTo(+e.target.value);
+$("seek").onpointerdown = e => {
+  if (e.button) return;
+  resume = playing;
+  pause();
+  // 放開的位置可能在元素外，所以聽整個視窗；只聽這一次
+  const end = new AbortController();
+  for (const type of ["pointerup", "pointercancel"])
+    addEventListener(type, () => { end.abort(); if (resume && !recording) play(); resume = false; }, { signal: end.signal });
+};
+// 方向鍵一次一個月、PageUp／PageDown 一年；Home／End 用原生的
+$("seek").onkeydown = e => {
+  const by = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1, PageUp: 12, PageDown: -12 }[e.key];
+  if (!by || e.ctrlKey || e.metaKey || e.altKey) return;
+  e.preventDefault();
+  const at = progress * (labels.length - 1);
+  seekTo(Math.abs(by) === 1 ? (by > 0 ? Math.floor(at + 1e-6) + 1 : Math.ceil(at - 1e-6) - 1) : Math.round(at) + by);
+};
 $("customForm").onsubmit = e => { e.preventDefault(); loadData(); };   // 按鈕與 Enter 共用；輸入法選字的 Enter 由瀏覽器擋掉
 
 // -------- 類別標籤 ↔ 詞欄 --------
