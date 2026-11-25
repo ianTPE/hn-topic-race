@@ -6,7 +6,7 @@ const { PAGE, launch, settle } = require("../tests/helper.cjs");
   const p = await b.newPage({ viewport: { width: 1200, height: 630 }, reducedMotion: "reduce" });   // reduced motion: jumps to the last month
   await p.goto(PAGE);
   // the canvas stays where it is in the DOM (its children draw it); only the rest of the page is hidden
-  await p.addStyleTag({ content: `.wrap > :not(.stage), .stage > :not(canvas) { display:none !important; }
+  await p.addStyleTag({ content: `.wrap > :not(.stage), .stage > :not(.screen) { display:none !important; }
     .stage { position:fixed; inset:0; border-radius:0; outline:0; } canvas { width:1120px !important; margin:0 auto; }` });
   await settle(p);
   if (await p.evaluate(() => !LIVE || canvas.getBoundingClientRect().height !== 630)) throw new Error("preview: HTML-in-Canvas is not available or the layout is off");

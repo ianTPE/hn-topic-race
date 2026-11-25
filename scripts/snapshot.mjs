@@ -55,6 +55,7 @@ for (const k of store.keys()) if (!k.startsWith(CACHE_PREFIX)) store.delete(k); 
 const cats = Object.keys(CATEGORIES).filter(c => CATEGORIES[c].length);
 const terms = [...new Set(cats.flatMap(c => [...CATEGORIES[c]]))];   // 跨類別重複的詞只抓一次
 console.log(`${cats.length} 個類別、${terms.length} 個不重複詞`);
+if (process.argv.includes("--check")) process.exit(0);          // 只確認頁面程式能在 Node 裡載入，不抓資料
 
 let lastSave = Date.now();
 const t0 = Date.now();

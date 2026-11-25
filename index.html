@@ -64,12 +64,21 @@
 
   .stage { margin:0; border-radius:14px; overflow:clip; background:var(--stage); box-shadow:0 1px 2px rgb(8 14 24 / .2), 0 18px 40px -18px rgb(8 14 24 / .45);
            outline:1px solid rgb(255 255 255 / .06); outline-offset:-1px; color-scheme:dark; }
-  canvas { display:block; scroll-margin-top:16px; width:100%; height:auto; background:var(--stage); }
+  /* 兩張畫布疊在一起：一張 2D、一張 WebGL，HTML 子元素只屬於正在用的那一張 */
+  .screen { display:grid; background:var(--stage); scroll-margin-top:16px; }
+  canvas { grid-area:1 / 1; display:block; scroll-margin-top:16px; width:100%; height:auto; aspect-ratio:var(--ar); background:var(--stage); pointer-events:none; z-index:0; }
+  canvas.on { pointer-events:auto; z-index:1; }
+  #gl { touch-action:pan-y; cursor:grab; }
+  #gl:active { cursor:grabbing; }
+  #gl:focus-visible { outline-color:var(--stage-ink); outline-offset:-4px; border-radius:14px; }
+  #gl .row { user-select:none; }
+  #gl .row :is(.name, .val) { user-select:text; }
   /* canvas 裡的元素：真的 HTML，以設計座標（1280×720 或 640×800 的 CSS px）排版，再由 drawElementImage() 畫到畫布 */
   canvas :is(h2, p, ul) { margin:0; padding:0; }
   canvas { color:var(--stage-ink); font:500 16px/1.4 var(--sans); }
   .c-title { inline-size:var(--title-w); }
   .c-title h2 { font:700 var(--title-fs)/1.35 var(--sans); letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-inline-size:var(--h2-w); }
+  .c-title :is(h2, p) { inline-size:fit-content; }
   .c-title p { font:400 var(--sub-fs)/1.35 var(--sans); color:#8794a3; white-space:nowrap; }
   .c-month { inline-size:340px; text-align:end; font:700 var(--month-fs)/1.2 var(--mono); }
   .c-badge { inline-size:260px; text-align:end; font:500 var(--tick-fs)/1.5 var(--mono); color:#35c99a; text-decoration:none; }
@@ -78,7 +87,7 @@
   .row { --len:0px; position:relative; inline-size:var(--cw); block-size:var(--row); line-height:var(--row); white-space:nowrap; }
   .row > * { position:absolute; inset-block:0; transition:opacity 160ms; }
   .row .rank { inset-inline-start:0; inline-size:calc(var(--pad) + 18px); text-align:end; font:400 var(--rank-fs) var(--mono); line-height:inherit; color:#8794a3; }
-  .row .name { inset-inline-end:calc(var(--cw) - var(--name-r)); max-inline-size:var(--name-max); overflow:hidden; text-overflow:ellipsis;
+  .row .name { inset-inline-end:calc(var(--cw) - var(--name-r) + var(--cap-l, 0px)); max-inline-size:var(--name-max); overflow:hidden; text-overflow:ellipsis;
                font-size:var(--name-fs); color:#c3ccd6; text-decoration:none; }
   .row .name:hover { text-decoration:underline; text-underline-offset:4px; }
   .row .name:focus-visible, .c-badge:focus-visible { outline:2px solid var(--stage-ink); outline-offset:-2px; border-radius:4px; }
@@ -86,12 +95,12 @@
   .row .track { inset-inline-start:var(--bar-x); inline-size:var(--bar-max); inset-block:var(--bar-pad); clip-path:inset(-24px -24px -24px 0); }
   .row .bar { display:block; block-size:100%; border-radius:0 5px 5px 0; transform:translateX(calc(var(--len) - 100%));
               background:linear-gradient(color-mix(in oklab, var(--c), #fff 16%), var(--c) 55%); }
-  .row .val { inset-inline-start:calc(var(--bar-x) + 10px); transform:translateX(var(--len)); font:400 var(--val-fs) var(--mono); line-height:inherit; font-variant-numeric:tabular-nums; }
+  .row .val { inset-inline-start:calc(var(--bar-x) + 10px + var(--cap-r, 0px)); transform:translateX(var(--len)); font:400 var(--val-fs) var(--mono); line-height:inherit; font-variant-numeric:tabular-nums; }
   .row.first :is(.name, .val) { font-weight:700; color:var(--stage-ink); }
   .row.first .bar { box-shadow:0 0 20px color-mix(in srgb, var(--c) 60%, transparent); }
   .row.zero .bar { visibility:hidden; }
   @media (hover: hover) { .rows:has(.row:hover) .row:not(:hover) > * { opacity:.42; } }
-  canvas.compact .rank { display:none; }
+  .compact .rank { display:none; }
   .tick { display:block; inline-size:80px; text-align:center; font:400 var(--tick-fs)/1.4 var(--mono); color:#8794a3; }
   /* 時間軸就是原生的 range：左右各多半個拇指寬，拇指中心才會對準刻度 */
   .seek { --thumb:18px; --track:4px; --at:0; appearance:none; display:block; inline-size:calc(var(--cw) - var(--pad) * 2 + var(--thumb)); block-size:40px;
@@ -103,7 +112,7 @@
   .seek:hover:enabled::-webkit-slider-thumb, .seek:active:enabled::-webkit-slider-thumb { box-shadow:0 0 0 3px var(--stage), 0 0 0 9px rgb(255 255 255 / .18); }
   .seek:focus-visible { outline:none; }             /* 外框畫在拇指上，不壓到年份 */
   .seek:focus-visible::-webkit-slider-thumb { outline:2px solid #35c99a; outline-offset:3px; }
-  canvas.compact .seek { --thumb:26px; --track:6px; block-size:64px; border-radius:32px; }
+  .compact .seek { --thumb:26px; --track:6px; block-size:64px; border-radius:32px; }
   .years { position:relative; inline-size:var(--cw); block-size:24px; font:400 var(--tick-fs)/24px var(--mono); color:#8794a3; }
   .years span { position:absolute; inline-size:60px; margin-inline-start:-30px; text-align:center; }
   .try { padding:12px 18px 14px; font-size:14px; line-height:1.55; color:#a3afbc; background:var(--stage-2); border-top:1px solid var(--stage-line); text-wrap:pretty; }
@@ -115,7 +124,7 @@
   .nope h2 { font-size:clamp(22px, 3.4vw, 34px); text-wrap:balance; }
   .nope p { max-width:62ch; color:#c3ccd6; }
   .no-hic .nope { display:block; }
-  .no-hic :is(canvas, .transport, .try, .cats, #status, .custom) { display:none; }
+  .no-hic :is(.screen, .transport, .try, .cats, #status, .custom) { display:none; }
   .transport { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:10px 14px; background:var(--stage-2); border-top:1px solid var(--stage-line); }
   .transport .push { margin-inline-start:auto; }
   .transport button { display:inline-flex; align-items:center; gap:8px; min-block-size:38px; padding:0 14px; border:0; border-radius:8px;
@@ -221,7 +230,8 @@
 
 <figure class="stage" aria-label="Animated bar chart race of the selected terms, month by month" data-zh-label="所選詞彙逐月排名的長條圖競賽動畫">
   <!-- HTML-in-Canvas：content="drawable" 讓子元素參與排版，標了 drawable 的元素由 drawElementImage() 畫進畫布 -->
-  <canvas id="canvas" content="drawable">
+  <div class="screen" id="screen">
+  <canvas id="canvas" class="on" content="drawable">
     <div class="c-title" id="cTitle" drawable><h2></h2><p></p><p></p></div>
     <time class="c-month" id="cMonth" drawable></time>
     <a class="c-badge" id="cBadge" drawable href="https://github.com/WICG/html-in-canvas" target="_blank" rel="noopener">HTML-in-Canvas</a>
@@ -230,6 +240,8 @@
     <div class="years" id="years" drawable aria-hidden="true"></div>
     <input class="seek" id="seek" type="range" drawable min="0" step="any" value="0" autocomplete="off" aria-label="Month" data-zh-label="月份">
   </canvas>
+  <canvas id="gl" content="drawable" role="group" aria-label="3D view. Arrow keys rotate, 0 resets." data-zh-label="3D 畫面。方向鍵旋轉，0 回正。"></canvas>
+  </div>
   <div class="nope">
     <h2 data-zh="你的瀏覽器還不支援 HTML-in-Canvas">Your browser can’t draw HTML into a canvas yet</h2>
     <p data-zh="這張圖的每個字、每條長條都是真的 HTML，直接畫進 canvas：點得到、選得到、搜尋得到，還能錄成影片。目前 Chrome 157 以上看得到。">Every word and bar in this chart is real HTML drawn into a canvas: you can click it, select it, find it with Ctrl+F, and record it as video. Today that works in Chrome 157 and later.</p>
@@ -240,9 +252,11 @@
     <button id="replay" type="button"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5a5.5 5.5 0 1 1-5.3 4h1.6A4 4 0 1 0 8 4v2.6L3.9 3.3 8 0z"/></svg><span data-zh="重播">Replay</span></button>
     <label class="axis" title="On: the axis rescales so the current leaders stay readable. Off: one fixed scale for the whole period, so bar lengths compare across months." data-zh-title="開：數值軸跟著領先者縮放，早期的小數字也看得清楚。關：整段期間用同一個比例，不同月份的長條可以直接比長短。">
       <input id="dynAxis" type="checkbox" switch autocomplete="off"><span data-zh="動態縮放">Dynamic axis</span></label>
+    <label class="axis" title="Draws the same HTML onto 3D bars. Drag empty space to rotate, double-click to reset. For comparing lengths, 2D is more accurate." data-zh-title="把同一批 HTML 畫到立體長條上。拖曳空白處轉視角，雙擊回正。要比長短，2D 比較準。">
+      <input id="mode3d" type="checkbox" switch autocomplete="off"><span>3D</span></label>
     <button id="download" type="button" class="push"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M7.2 1.5h1.6v7l2.6-2.6 1.1 1.1L8 11.5 3.5 7l1.1-1.1 2.6 2.6zM2 13h12v1.6H2z"/></svg><span data-zh="下載影片">Download video</span></button>
   </div>
-  <figcaption class="try"><span data-zh="上面的每個詞、數字和長條都是活的 HTML，畫在同一個 canvas 裡。拖曳時間軸、點一個詞去看當月的 HN 討論、選取數字、按 Ctrl+F 搜尋，再把同一個畫面下載成影片。">Every term, number and bar above is live HTML drawn into one canvas. Drag the timeline, click a term to read that month’s HN threads, select a number, press Ctrl+F, then download the same picture as a video.</span>
+  <figcaption class="try"><span data-zh="上面的每個詞、數字和長條都是活的 HTML，畫在同一個 canvas 裡。拖曳時間軸、點一個詞去看當月的 HN 討論、選取數字、按 Ctrl+F 搜尋，再把同一個畫面下載成影片。打開 3D，還是同一批 HTML，只是貼到了 WebGL 的立體長條上。">Every term, number and bar above is live HTML drawn into one canvas. Drag the timeline, click a term to read that month’s HN threads, select a number, press Ctrl+F, then download the same picture as a video. Switch on 3D and it is still the same HTML, now on WebGL bars.</span>
     <a href="https://github.com/WICG/html-in-canvas" data-zh="什麼是 HTML-in-Canvas？">What is HTML-in-Canvas?</a></figcaption>
 </figure>
 <p id="status" role="status"></p>
@@ -292,7 +306,7 @@
   <dt>Missing data</dt>
   <dd>failed requests are retried (with extra backoff on 429). If a month still fails, it is dropped from both numerator and denominator, so it can’t create a fake spike or crash. If an entire window has no data, the value is linearly interpolated from its nearest valid neighbors.</dd>
   <dt>HTML-in-Canvas</dt>
-  <dd>the canvas has <code>content="drawable"</code>, and each row, the title, the month, the axis labels and the timeline (a native <code>&lt;input type="range"&gt;</code>) are real HTML elements marked <code>drawable</code>. In the <code>paint</code> event, <code>drawElementImage()</code> draws their latest snapshots, next to grid lines drawn with plain Canvas 2D. Clicks, text selection, find-in-page and screen readers keep working at the drawn positions, and <code>captureStream()</code> records the same pixels with their CSS. Plain HTML can’t be recorded this way, and plain canvas text can’t be selected.</dd>
+  <dd>the canvas has <code>content="drawable"</code>, and each row, the title, the month, the axis labels and the timeline (a native <code>&lt;input type="range"&gt;</code>) are real HTML elements marked <code>drawable</code>. In the <code>paint</code> event, <code>drawElementImage()</code> draws their latest snapshots, next to grid lines drawn with plain Canvas 2D. Clicks, text selection, find-in-page and screen readers keep working at the drawn positions, and <code>captureStream()</code> records the same pixels with their CSS. Plain HTML can’t be recorded this way, and plain canvas text can’t be selected. The 3D switch moves the same elements to a WebGL canvas: <code>texElementSubImage2D()</code> turns them into textures, and <code>updateElementGeometry()</code> gets the same perspective matrix, so tilted text is still clickable and selectable. Perspective distorts lengths, so use 2D to compare.</dd>
   <dt>Axis</dt>
   <dd>by default one fixed scale covers the whole period, so bar lengths compare across months. With “Dynamic axis” on, the scale follows the current leaders so early, smaller numbers stay readable; bars still start at zero, but their lengths then compare only within one month, so across months read the axis and the numbers.</dd>
   <dt>Note</dt>
@@ -309,7 +323,7 @@
   <dt>缺資料的處理</dt>
   <dd>抓取失敗會重試（429 特別退避）；仍失敗的月份，該月會同時從分子與分母移除，因此不會出現假的尖峰或暴跌。若整個窗口都沒有可用資料，會以前後最近的有效值做線性內插。</dd>
   <dt>HTML-in-Canvas</dt>
-  <dd>畫布設了 <code>content="drawable"</code>，每一列、標題、月份、刻度和時間軸（原生的 <code>&lt;input type="range"&gt;</code>）都是標了 <code>drawable</code> 的真實 HTML 元素。在 <code>paint</code> 事件裡用 <code>drawElementImage()</code> 畫出它們最新的快照，格線則照舊用 Canvas 2D 畫。點擊、選字、頁內搜尋、螢幕報讀器都會對準畫出來的位置，<code>captureStream()</code> 也能連同 CSS 效果一起錄下來。一般 HTML 沒辦法這樣錄影，一般 canvas 的字則選不到。</dd>
+  <dd>畫布設了 <code>content="drawable"</code>，每一列、標題、月份、刻度和時間軸（原生的 <code>&lt;input type="range"&gt;</code>）都是標了 <code>drawable</code> 的真實 HTML 元素。在 <code>paint</code> 事件裡用 <code>drawElementImage()</code> 畫出它們最新的快照，格線則照舊用 Canvas 2D 畫。點擊、選字、頁內搜尋、螢幕報讀器都會對準畫出來的位置，<code>captureStream()</code> 也能連同 CSS 效果一起錄下來。一般 HTML 沒辦法這樣錄影，一般 canvas 的字則選不到。3D 開關會把同一批元素搬到 WebGL 畫布：<code>texElementSubImage2D()</code> 把它們變成貼圖，<code>updateElementGeometry()</code> 收到同一個透視矩陣，所以傾斜的字照樣點得到、選得到。透視會讓長短失真，要比較請用 2D。</dd>
   <dt>數值軸</dt>
   <dd>預設整段期間用同一個固定比例，不同月份的長條可以直接比長短。開啟「動態縮放」後，比例跟著當時的領先者走，早期的小數字也看得清楚；長條仍從零開始，但長短只能在同一個月內互比，跨月份請看刻度與數字。</dd>
   <dt>注意</dt>
@@ -355,6 +369,7 @@ const MSG = {
     chartTitle: "HN Topic Race",
     chartSub: wnd => `Mentions per million HN posts + comments, rolling ${wnd}-month window`,
     axisMoves: "axis rescales with the leaders",
+    noWebgl: "3D needs WebGL 2, which is not available here.",
     openHN: (q, m) => `Search HN for “${q}” in ${m}`,
     needTerm: "Enter at least one term.",
     customHint: "Type the terms you want to compare, then press Enter or “Fetch data”. The chart keeps its current data until then.",
@@ -390,6 +405,7 @@ const MSG = {
     chartTitle: "HN 話題競賽",
     chartSub: wnd => `每百萬則 HN 貼文＋留言中提到的則數，滾動 ${wnd} 個月`,
     axisMoves: "數值軸動態縮放",
+    noWebgl: "3D 需要 WebGL 2，這裡無法使用。",
     openHN: (q, m) => `在 HN 搜尋 ${m} 的「${q}」`,
     needTerm: "請輸入至少一個詞。",
     customHint: "輸入你想比的詞，按 Enter 或「抓資料」。新資料抓到之前，圖上仍是原本的資料。",
@@ -456,7 +472,7 @@ for (const b of document.querySelectorAll("[data-set-lang]")) b.onclick = () => 
 // 錄影中鎖住語言、數值軸與播放，避免影片中途變樣
 function lockLang(locked) {
   for (const b of document.querySelectorAll("[data-set-lang]")) b.disabled = locked;
-  for (const id of ["dynAxis", "play", "replay", "seek"]) $(id).disabled = locked;
+  for (const id of ["dynAxis", "play", "replay", "seek", "mode3d"]) $(id).disabled = locked;
 }
 
 // -------- 類別（已消歧、已稽核）--------
@@ -633,23 +649,24 @@ function computeLayout(n) {
   BAR_H = Math.max(14, Math.min(34, ROW_H * 0.62));
   const name = Math.max(COMPACT ? 17 : 14, Math.min(22, Math.round(ROW_H * 0.46)));
   const px = { "--row": ROW_H, "--bar-pad": (ROW_H - BAR_H) / 2, "--name-fs": name, "--val-fs": Math.max(COMPACT ? 17 : 14, name - 2), "--rank-fs": Math.max(12, name - 6) };
-  for (const k in px) canvas.style.setProperty(k, px[k] + "px");
+  for (const k in px) $("screen").style.setProperty(k, px[k] + "px");
 }
 if (LIVE) {
   const px = { "--cw": W, "--pad": PAD, "--name-r": NAME_RIGHT, "--name-max": NAME_MAX, "--bar-x": BAR_X, "--bar-max": BAR_MAX,
                "--title-w": W - PAD * 2, "--h2-w": W - PAD * 2 - (COMPACT ? 200 : 260),
                "--title-fs": COMPACT ? 27 : 30, "--sub-fs": COMPACT ? 17 : 16, "--month-fs": COMPACT ? 36 : 46, "--tick-fs": COMPACT ? 16 : 13 };
-  for (const k in px) canvas.style.setProperty(k, px[k] + "px");
-  canvas.style.aspectRatio = `${W} / ${H}`;
-  canvas.classList.toggle("compact", COMPACT);
+  for (const k in px) $("screen").style.setProperty(k, px[k] + "px");
+  $("screen").style.setProperty("--ar", `${W} / ${H}`);
+  $("screen").classList.toggle("compact", COMPACT);
 }
 
 // 畫布格線與實體像素 1:1 才不會糊；錄影時固定成影片尺寸
 let recording = false, screenGrid = null;
+let surface = canvas;                     // 正在用的畫布：2D 的 canvas 或 WebGL 的 #gl
 function fitGrid() {
   const [w, h] = recording || !screenGrid ? [W * VIDEO_SCALE, H * VIDEO_SCALE] : screenGrid;
-  if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
-  canvas.requestPaint();
+  if (surface.width !== w || surface.height !== h) { surface.width = w; surface.height = h; }
+  surface.requestPaint();
 }
 if (LIVE) new ResizeObserver(([e]) => {
   const box = e.devicePixelContentBoxSize[0];
@@ -1209,7 +1226,7 @@ function render(p, snap = false) {
   if (seek.getAttribute("aria-valuetext") !== month) seek.setAttribute("aria-valuetext", month);
 
   view = { max, ticks: setTicks(axisTicks(max)) };
-  canvas.requestPaint();
+  surface.requestPaint();
 }
 
 // 畫一個元素：x、y、w、h 用設計座標；m 是往外多畫的邊，光暈才不會被裁掉
@@ -1219,7 +1236,7 @@ function put(node, x, y, w, h, m = 0) {
 }
 // 快照在這個事件之前剛更新，這裡畫的會出現在同一幀；drawElementImage() 也會把點擊、選取、無障礙的位置同步到畫出來的地方
 if (LIVE) canvas.onpaint = () => {
-  if (!view) return;
+  if (!view || surface !== canvas) return;
   const { max, ticks } = view, g = canvas.width / W;
   ctx.reset();
   ctx.fillStyle = INK.bg;
@@ -1252,7 +1269,276 @@ if (LIVE) canvas.onpaint = () => {
   for (const d of [...data].sort((a, b) => a.curY - b.curY)) put(d.row, 0, d.curY, W, ROW_H, 24);
   const [sw, sh] = size($("seek"));
   put($("seek"), (W - sw) / 2, ty - sh / 2, sw, sh);          // 最後畫：點擊判定在最上層
+  showSurface();
 };
+
+// 換畫布：元素用 moveBefore() 搬過去（焦點、選取、輸入狀態都留著），新畫布畫好第一格才翻到上面，不會閃
+function useSurface(next) {
+  if (surface === next) return;
+  for (const c of [...surface.children]) next.moveBefore(c, null);
+  surface = next;
+  fitGrid();
+}
+function showSurface() {
+  for (const c of [canvas, $("gl")]) c.classList.toggle("on", c === surface);
+}
+
+// -------- 3D：同一批 HTML 當成 WebGL 貼圖 --------
+const DEG = Math.PI / 180;
+const TILT = COMPACT ? { yaw: -10, pitch: -8, yawMax: 18, pitchMax: 14 } : { yaw: -18, pitch: -12, yawMax: 30, pitchMax: 22 };
+const DEPTH_3D = COMPACT ? 22 : 46, EYE = 2800;           // 長條厚度、鏡頭距離（設計座標）
+let yaw = TILT.yaw, pitch = TILT.pitch, tilt = 0;          // tilt：0 是正面（和 2D 一樣），1 是完整視角
+let scene = null;
+// 視角變了：重畫，並把數字或名字讓開露出來的長條端面
+function turned() {
+  const cap = DEPTH_3D * tilt * Math.sin(yaw * tilt * DEG);
+  $("screen").style.setProperty("--cap-r", `${Math.max(0, -cap).toFixed(2)}px`);
+  $("screen").style.setProperty("--cap-l", `${Math.max(0, cap).toFixed(2)}px`);
+  surface.requestPaint();
+}
+
+function initScene() {
+  const gl = $("gl").getContext("webgl2", { antialias: true, alpha: false });
+  if (!gl) return null;
+  const shader = (type, src) => {
+    const o = gl.createShader(type);
+    gl.shaderSource(o, src); gl.compileShader(o);
+    if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o));
+    return o;
+  };
+  const prog = gl.createProgram();
+  gl.attachShader(prog, shader(gl.VERTEX_SHADER, `#version 300 es
+    in vec3 pos; in vec3 nor; in vec2 uv; uniform mat4 m; out vec3 vN; out vec2 vUv;
+    void main() { gl_Position = m * vec4(pos, 1.0); vN = nor; vUv = uv; }`));
+  gl.attachShader(prog, shader(gl.FRAGMENT_SHADER, `#version 300 es
+    precision highp float;
+    in vec3 vN; in vec2 vUv; out vec4 o;
+    uniform int mode; uniform vec4 color; uniform sampler2D tex; uniform vec4 box; uniform float amt, sheen;
+    float soft(float a, float b, float x, float w) { return smoothstep(a - w, a + w, x) * (1.0 - smoothstep(b - w, b + w, x)); }
+    void main() {
+      if (mode == 0) { o = texture(tex, vUv) * color.a; return; }           // HTML 貼圖（預乘 alpha）
+      if (mode == 1) {                                                        // 長條側面：上方打光，往後變暗，前緣一道反光
+        float light = 0.42 + 0.5 * max(0.0, -vN.y) + 0.3 * max(0.0, vN.x);
+        vec3 c = color.rgb * light * mix(1.0, 0.4, vUv.y) + vec3(0.38) * smoothstep(0.09, 0.0, vUv.y) * (0.35 + 0.65 * max(0.0, -vN.y));
+        o = vec4(c, 1.0); return;
+      }
+      if (mode == 2) {                                                        // 背牆：中間稍亮，四周淡出到底色
+        vec2 e = smoothstep(vec2(0.0), vec2(0.22), vUv) * smoothstep(vec2(0.0), vec2(0.22), 1.0 - vUv);
+        o = vec4(mix(color.rgb, vec3(0.098, 0.129, 0.176), e.x * e.y * amt), 1.0); return;
+      }
+      if (mode == 5) {                                                        // 一條長條投在牆上的影子與反射的顏色（box：長、高，其餘是往外的邊）
+        vec2 p = vUv * (box.xy + 2.0 * box.zw) - box.zw;
+        float shade = 0.72 * soft(10.0, box.x + 18.0, p.x, 20.0) * soft(22.0, box.y + 26.0, p.y, 16.0) * min(1.0, box.x / 24.0) * amt;
+        float glow = 0.10 * soft(0.0, box.x, p.x, 70.0) * soft(-4.0, box.y + 4.0, p.y, 26.0) * min(1.0, box.x / 80.0) * amt;
+        o = vec4(color.rgb * glow, shade); return;
+      }
+      if (mode == 3) {                                                        // 正面的反光帶：跟著視角左右移動
+        float d = (vUv.x * box.z - sheen + (vUv.y - 0.5) * 40.0) / 90.0;
+        float corner = length(max(vec2(vUv.x * box.z, abs(vUv.y - 0.5) * box.w) - vec2(box.z - 5.0, box.w * 0.5 - 5.0), 0.0)) - 5.0;
+        float a = (exp(-d * d) * 0.22 + 0.10 * smoothstep(0.5, 0.0, vUv.y)) * amt * smoothstep(0.7, -0.7, corner);
+        o = vec4(vec3(a), a * 0.25); return;
+      }
+      o = vec4(color.rgb * color.a, color.a);                                 // 純色線
+    }`));
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+  gl.useProgram(prog);
+
+  // 0–5：正面的單位方形；6–29：長條的上、下、左、右四個側面（uv.y 是深度，0 在前）
+  const v = [], face = (a, b, c, d, n) => { for (const [q, t] of [[a, [0, 0]], [b, [1, 0]], [c, [1, 1]], [a, [0, 0]], [c, [1, 1]], [d, [0, 1]]]) v.push(...q, ...n, ...t); };
+  face([0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0], [0, 0, 1]);
+  face([0, 0, 0], [1, 0, 0], [1, 0, -1], [0, 0, -1], [0, -1, 0]);
+  face([0, 1, 0], [1, 1, 0], [1, 1, -1], [0, 1, -1], [0, 1, 0]);
+  face([0, 0, 0], [0, 1, 0], [0, 1, -1], [0, 0, -1], [-1, 0, 0]);
+  face([1, 0, 0], [1, 1, 0], [1, 1, -1], [1, 0, -1], [1, 0, 0]);
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(v), gl.STATIC_DRAW);
+  for (const [name, size, at] of [["pos", 3, 0], ["nor", 3, 12], ["uv", 2, 24]]) {
+    const l = gl.getAttribLocation(prog, name);
+    gl.enableVertexAttribArray(l);
+    gl.vertexAttribPointer(l, size, gl.FLOAT, false, 32, at);
+  }
+  gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+  gl.depthFunc(gl.LEQUAL);
+  const names = ["m", "mode", "color", "tex", "box", "amt", "sheen"];
+  return { gl, u: Object.fromEntries(names.map(n => [n, gl.getUniformLocation(prog, n)])), tex: new Map(),
+           aniso: gl.getExtension("EXT_texture_filter_anisotropic") };
+}
+
+const rgb = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255);
+// 設計座標 → 裁剪座標
+const CLIP = () => new DOMMatrix([2 / W, 0, 0, 0, 0, -2 / H, 0, 0, 0, 0, -1 / 4000, 0, -1, 1, 0, 1]);
+// 圖表區的視角：繞中心轉，加透視，再縮到剛好放得進標題與時間軸之間
+function plotMatrix() {
+  const x0 = COMPACT ? 8 : 16, x1 = W - x0, y0 = TOP - 34, y1 = PLOT_BOTTOM + 4, cx = W / 2, cy = (TOP + PLOT_BOTTOM) / 2;
+  const persp = new DOMMatrix();
+  persp.m34 = -1 / EYE;
+  const m = new DOMMatrix().translateSelf(cx, cy).multiplySelf(persp)
+    .rotateAxisAngleSelf(1, 0, 0, pitch * tilt).rotateAxisAngleSelf(0, 1, 0, yaw * tilt).translateSelf(-cx, -cy);
+  let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
+  for (const x of [x0, x1]) for (const y of [y0, y1]) for (const z of [0, -DEPTH_3D]) {
+    const q = m.transformPoint(new DOMPoint(x, y, z));
+    l = Math.min(l, q.x / q.w); r = Math.max(r, q.x / q.w); t = Math.min(t, q.y / q.w); b = Math.max(b, q.y / q.w);
+  }
+  const k = Math.min(1, (x1 - x0) / (r - l), (y1 - y0) / (b - t));
+  return new DOMMatrix().translateSelf(mix(cx, (x0 + x1) / 2, tilt), (y0 + y1) / 2).scaleSelf(k, k, 1)
+    .translateSelf(-mix(cx, (l + r) / 2, tilt), -mix((y0 + y1) / 2, (t + b) / 2, tilt)).multiplySelf(m);
+}
+const mix = (a, b, t) => a + (b - a) * t;
+
+function paintScene(changed) {
+  const { gl, u, tex, aniso } = scene, c = $("gl"), { max, ticks } = view, g = c.width / W, k = c.clientWidth / W;
+  const dirty = new Set(changed), clip = CLIP();
+  gl.viewport(0, 0, c.width, c.height);
+  const bg = rgb(INK.bg), plot = plotMatrix(), flat = new DOMMatrix();
+  gl.clearColor(...bg, 1);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.uniform1f(u.amt, tilt);
+  const draw = (mode, m, color = [0, 0, 0, 1], first = 0, count = 6) => {
+    gl.uniform1i(u.mode, mode);
+    gl.uniformMatrix4fv(u.m, false, clip.multiply(m).toFloat32Array());
+    gl.uniform4fv(u.color, color);
+    gl.drawArrays(gl.TRIANGLES, first, count);
+  };
+  const line = (base, x, y, w, h, hex, a = 1) => draw(4, base.translate(x, y).scale(w, h, 1), [...rgb(hex), a]);
+
+  // 背牆與陰影
+  const bars = data.map(d => ({ d, x: BAR_X, y: d.curY + (ROW_H - BAR_H) / 2, len: d.curVal > 0 ? Math.max(2, d.curVal / max * BAR_MAX) : 0 }));
+  if (tilt > 0) {
+    const wall = [-W * 0.35, TOP - H * 0.4, W * 1.7, PLOT_BOTTOM - TOP + H * 0.8];
+    draw(2, plot.translate(wall[0], wall[1], -DEPTH_3D - 10).scale(wall[2], wall[3], 1), [...bg, 1]);
+    const mx = 72, my = 46;
+    for (const o of bars) if (o.len) {
+      gl.uniform4fv(u.box, [o.len, BAR_H, mx, my]);
+      draw(5, plot.translate(o.x - mx, o.y - my, -DEPTH_3D - 10).scale(o.len + mx * 2, BAR_H + my * 2, 1), [...rgb(o.d.color), 1]);
+    }
+    // 長條側面；正面是 HTML 自己的 CSS 長條
+    gl.enable(gl.DEPTH_TEST);
+    for (const o of bars) if (o.len) draw(1, plot.translate(o.x, o.y).scale(o.len, BAR_H, DEPTH_3D * tilt), [...rgb(o.d.color), 1], 6, 24);
+    gl.disable(gl.DEPTH_TEST);
+  }
+  for (const { v, alpha } of ticks) line(plot, BAR_X + v / max * BAR_MAX - 0.5, TOP - 6, 1, PLOT_BOTTOM - TOP + 6, INK.line, alpha);
+  const ty = H - 44;
+  labels.forEach((l, i) => { if (l.slice(5).startsWith("01")) line(flat, yearX(i) - 0.5, ty + 5, 1, 5, INK.low); });
+
+  // 一個 HTML 元素：只有變了才重傳貼圖；畫完把同一個矩陣交給瀏覽器，點擊、選字、報讀器才對得到
+  const place = (node, base, x, y, w, h, margin = 0, alpha = 1) => {
+    const tw = Math.ceil((w + margin * 2) * g * 1.5), th = Math.ceil((h + margin * 2) * g * 1.5);   // 斜看會放大，多取 1.5 倍
+    let t = tex.get(node);
+    if (!t || t.w !== tw || t.h !== th) {
+      if (t) gl.deleteTexture(t.id);
+      t = { id: gl.createTexture(), w: tw, h: th };
+      tex.set(node, t);
+      gl.bindTexture(gl.TEXTURE_2D, t.id);
+      gl.texStorage2D(gl.TEXTURE_2D, Math.floor(Math.log2(Math.max(tw, th))) + 1, gl.RGBA8, tw, th);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      if (aniso) gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, 8);
+      dirty.add(node);
+    }
+    gl.bindTexture(gl.TEXTURE_2D, t.id);
+    if (dirty.has(node)) {
+      gl.texElementSubImage2D(gl.TEXTURE_2D, 0, 0, 0, node, { sx: -margin, sy: -margin, swidth: w + margin * 2, sheight: h + margin * 2, width: tw, height: th });
+      gl.generateMipmap(gl.TEXTURE_2D);
+    }
+    const m = base.translate(x, y);
+    draw(0, m.translate(-margin, -margin).scale(w + margin * 2, h + margin * 2, 1), [0, 0, 0, alpha]);
+    c.updateElementGeometry(node, { canvasTransform: new DOMMatrix().scaleSelf(k, k, 1).multiplySelf(m) });
+  };
+  const size = e => [e.offsetWidth, e.offsetHeight];
+  for (const { el: t, v, alpha } of ticks) place(t, plot, BAR_X + v / max * BAR_MAX - 40, TOP - (COMPACT ? 32 : 28), ...size(t), 0, alpha);
+  bars.sort((a, b) => a.d.curY - b.d.curY);
+  for (const o of bars) place(o.d.row, plot, 0, o.d.curY, W, ROW_H, 24);
+  gl.uniform1f(u.sheen, BAR_MAX * (0.42 - yaw * tilt / 70));
+  if (tilt > 0) for (const o of bars) if (o.len) {
+    gl.uniform4fv(u.box, [o.x, o.y, o.len, BAR_H]);
+    draw(3, plot.translate(o.x, o.y).scale(o.len, BAR_H, 1));
+  }
+  // 標題、月份、時間軸固定在正面
+  place($("cTitle"), flat, PAD, 26, ...size($("cTitle")));
+  place($("cMonth"), flat, W - PAD - 340, 22, ...size($("cMonth")));
+  place($("cBadge"), flat, W - PAD - 260, COMPACT ? 83 : 74, ...size($("cBadge")));
+  place($("years"), flat, 0, ty + 10, W, 24);
+  const [sw, sh] = size($("seek"));
+  place($("seek"), flat, (W - sw) / 2, ty - sh / 2, sw, sh);
+  // 換類別、刻度消失後留下的貼圖
+  for (const [node, t] of tex) if (!c.contains(node)) { gl.deleteTexture(t.id); tex.delete(node); }
+}
+if (LIVE) $("gl").onpaint = e => {
+  if (!view || !scene || surface !== $("gl")) return;
+  paintScene(e.changedElements);
+  showSurface();
+};
+
+// 2D ↔ 3D：鏡頭從正面轉過去；轉回正面後才換回 2D 畫布
+let turning = 0;
+function set3d(on) {
+  if (on && !scene) {
+    try { scene = initScene(); } catch (e) { console.error(e); }
+    if (!scene) { $("mode3d").checked = false; $("mode3d").disabled = true; setStatus(() => msg("noWebgl")); return; }
+  }
+  cancelAnimationFrame(turning);
+  if (on && surface !== $("gl")) {
+    for (const t of scene.tex.values()) scene.gl.deleteTexture(t.id);     // 搬過來的元素全部重傳
+    scene.tex.clear();
+    useSurface($("gl"));
+  }
+  $("gl").tabIndex = on ? 0 : -1;
+  const from = tilt, to = on ? 1 : 0, calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const done = () => { tilt = to; if (!on) useSurface(canvas); turned(); };
+  if (calm) { done(); return; }
+  let start = null;
+  const step = now => {
+    start ??= now;
+    const t = Math.min(1, (now - start) / 800);
+    tilt = mix(from, to, t * t * (3 - 2 * t));
+    if (t < 1) { turned(); turning = requestAnimationFrame(step); }
+    else done();
+  };
+  turning = requestAnimationFrame(step);
+}
+$("mode3d").onchange = e => set3d(e.target.checked);
+const clampTilt = () => {
+  yaw = Math.min(TILT.yawMax, Math.max(-TILT.yawMax, yaw));
+  pitch = Math.min(TILT.pitchMax, Math.max(-TILT.pitchMax, pitch));
+  turned();
+};
+const resetTilt = () => { yaw = TILT.yaw; pitch = TILT.pitch; turned(); };
+// 連結、數字、標題、時間軸照常操作；其他地方都是「空白」，拖曳轉視角
+const isBlank = e => e.target.closest(".name, .val, h2, p, time, a, input") === null;
+$("gl").onpointerdown = e => {
+  if (e.button || !isBlank(e)) return;
+  e.preventDefault();                       // 不要開始選字
+  if (e.pointerType === "mouse") $("gl").focus({ preventScroll: true });
+  $("gl").setPointerCapture(e.pointerId);
+};
+$("gl").onpointermove = e => {
+  if (!$("gl").hasPointerCapture(e.pointerId)) return;
+  yaw += e.movementX * 0.22;
+  pitch -= e.movementY * 0.22;
+  clampTilt();
+};
+$("gl").ondblclick = e => { if (isBlank(e)) resetTilt(); };
+$("gl").onkeydown = e => {
+  if (e.target !== $("gl") || e.ctrlKey || e.metaKey || e.altKey) return;
+  const by = { ArrowLeft: [-3, 0], ArrowRight: [3, 0], ArrowUp: [0, 3], ArrowDown: [0, -3] }[e.key];
+  if (e.key === "0") resetTilt();
+  else if (by) { e.preventDefault(); yaw += by[0]; pitch += by[1]; clampTilt(); }
+};
+$("gl").addEventListener("webglcontextlost", e => {
+  e.preventDefault();
+  scene = null;
+  cancelAnimationFrame(turning);
+  tilt = 0;
+  $("mode3d").checked = false;
+  useSurface(canvas);
+  turned();
+});
+$("gl").addEventListener("webglcontextrestored", () => { scene = null; });
+
 
 // -------- 播放控制 --------
 function tick(now) {
@@ -1471,8 +1757,8 @@ async function record() {
   fitGrid();
   progress = 0; phase = "run";
   render(0, true);
-  await new Promise(res => canvas.addEventListener("paint", res, { once: true }));
-  const stream = canvas.captureStream(30);
+  await new Promise(res => surface.addEventListener("paint", res, { once: true }));
+  const stream = surface.captureStream(30);
   const mimeType = ["video/mp4", "video/webm;codecs=vp8", "video/webm"]
     .find(t => MediaRecorder.isTypeSupported(t));
   const recorder = new MediaRecorder(stream, { ...(mimeType && { mimeType }), videoBitsPerSecond: 8e6 });

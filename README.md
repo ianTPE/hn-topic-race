@@ -32,6 +32,17 @@ Open `index.html` in Chrome 157 or later. `preview.png` is only the image shown 
 3. The `paint` event draws grid lines with plain Canvas 2D, then every element with `drawElementImage()`. The browser keeps hit testing and accessibility positions in sync.
 4. A `ResizeObserver` on `device-pixel-content-box` keeps the canvas grid at one pixel per device pixel. While recording, the grid is fixed at 1920×1080.
 
+### 3D
+
+The **3D** switch moves the same elements to a second, WebGL 2 canvas with `moveBefore()`, so focus and selection survive, and turns the camera. There is no 3D library.
+
+- Each row is uploaded with `texElementSubImage2D()`, only when it is in the paint event's `changedElements`.
+- The matrix that draws a row is also passed to `updateElementGeometry()`, perspective included. Links, text selection, find-in-page and the screen reader follow the tilt.
+- The front of each bar is still its CSS; WebGL adds the sides, a highlight and shadows on the wall behind.
+- Drag empty space, or focus the chart and use the arrow keys, to rotate; double-click or press 0 to reset. You can rotate while recording.
+
+2D stays the default because perspective makes lengths harder to compare.
+
 ## How mentions are counted
 
 - Every value is a share: items mentioning the term ÷ all posts and comments, over a rolling window. Growth of HN itself cancels out.
@@ -59,7 +70,7 @@ npm install
 npm test
 ```
 
-Needs Google Chrome 157 or later, or set `CHROME_PATH`. Takes about three minutes. All API calls are mocked.
+Needs Google Chrome 157 or later, or set `CHROME_PATH`. `CHROME_ARGS` adds browser flags, for example `--use-angle=gl-egl --ignore-gpu-blocklist` to test on a real GPU. Takes about four minutes. All API calls are mocked.
 
 ## Credits
 
