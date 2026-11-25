@@ -6,16 +6,31 @@ A bar chart race of what Hacker News talks about: mentions per million posts and
 
 [![Bar chart race frame ranking LLM names by Hacker News mentions](preview.png)](https://iantpe.github.io/hn-topic-race/)
 
+**Needs Chrome 157 or later.** Every term, number and bar is live HTML drawn into one `<canvas>` with [HTML-in-Canvas](https://github.com/WICG/html-in-canvas). That gives one picture two things that used to exclude each other:
+
+- It behaves like HTML: click a term to read that month's HN threads, select a number, press Ctrl+F, tab through the rows, use a screen reader.
+- It behaves like a canvas: `captureStream()` records the same pixels, CSS gradients and glow included, straight to a video.
+
+Other browsers show a short explanation instead of the chart, with links to the [Firefox](https://github.com/mozilla/standards-positions/issues/1076) and [Safari](https://github.com/WebKit/standards-positions/issues/630) discussions. There is deliberately no fallback renderer.
+
 One HTML file. No backend, no build step, no external scripts or fonts. Opening the page makes no network requests: the eight preset categories play from a snapshot embedded in the file.
 
 - **Compare your own terms**: up to 15, counted live through the [HN Search API](https://hn.algolia.com/api) and cached in your browser.
 - **Check the numbers**: "Spot-check hits" lists the HN items behind a count, with links.
+- **Fixed or dynamic axis**: one scale for the whole period by default; turn on Dynamic axis and the scale follows the leaders.
 - **Export a video**: 1920×1080 on desktop, portrait on phones.
 - English and Traditional Chinese; follows your light/dark setting.
 
 ## Run it
 
-Open `index.html` in a browser. `preview.png` is only the image shown when the link is shared; the page does not load it.
+Open `index.html` in Chrome 157 or later. `preview.png` is only the image shown when the link is shared; the page does not load it.
+
+## How the drawing works
+
+1. `<canvas content="drawable">` lays out its children. Each row is an `<li drawable>` with a link, a bar and a value.
+2. `render()` runs in `requestAnimationFrame` and only updates the DOM: text, a `--len` custom property, and the row order (`moveBefore()`, so focus and selection survive a rank change).
+3. The `paint` event draws grid lines with plain Canvas 2D, then every element with `drawElementImage()`. The browser keeps hit testing and accessibility positions in sync.
+4. A `ResizeObserver` on `device-pixel-content-box` keeps the canvas grid at one pixel per device pixel. While recording, the grid is fixed at 1920×1080.
 
 ## How mentions are counted
 
@@ -44,7 +59,7 @@ npm install
 npm test
 ```
 
-Needs Google Chrome, or set `CHROME_PATH`. Takes about three minutes. All API calls are mocked.
+Needs Google Chrome 157 or later, or set `CHROME_PATH`. Takes about three minutes. All API calls are mocked.
 
 ## Credits
 

@@ -37,6 +37,7 @@ const context = vm.createContext({
   document: {
     getElementById: id => (id === "exact" ? { checked: true } : stub),
     querySelectorAll: () => [],
+    createElement: () => stub,
     documentElement: {}
   },
   localStorage, fetch, setTimeout, URLSearchParams, requestAnimationFrame: () => 0, cancelAnimationFrame: () => {},

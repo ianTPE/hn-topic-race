@@ -11,4 +11,6 @@ const ok = (name, pass, detail = "") => {
   console.log(pass ? "PASS" : "FAIL", name, detail);
   if (!pass) process.exitCode = 1;
 };
-module.exports = { PAGE, OUT, launch, ok };
+// render() only updates the DOM; the canvas is painted in a later paint event
+const settle = p => p.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 30)))));
+module.exports = { PAGE, OUT, launch, ok, settle };

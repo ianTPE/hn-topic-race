@@ -8,7 +8,7 @@ const CJK=/[㐀-鿿]/;
  await p.route("https://hn.algolia.com/**",r=>{reqs++; if(mode==="fail"&&/duckdb/.test(r.request().url())) return r.fulfill({status:404,body:"x"});
    r.fulfill({json:{nbHits:1234,exhaustiveNbHits:true,hits:[{objectID:"1",title:"hello postgres",_highlightResult:{title:{value:"hello <mark>postgres</mark>"}}}]},headers:{"access-control-allow-origin":"*"}})});
  const vis=()=>p.evaluate(()=>{const c=document.body.cloneNode(true);return document.body.innerText});
- const st=()=>p.textContent("#status"), drawn=()=>p.evaluate(()=>{const o=ctx.fillText,a=[];ctx.fillText=(...x)=>{a.push(x[0]);o.apply(ctx,x)};render(progress);ctx.fillText=o;return a});
+ const st=()=>p.textContent("#status"), drawn=()=>p.evaluate(()=>{render(progress);return [...canvas.querySelectorAll("h2,p,time,.name,.val,.tick,.years span")].map(e=>e.textContent).concat([...canvas.querySelectorAll("[title]")].map(e=>e.title)).filter(Boolean)});
  
  const attrs=()=>p.evaluate(()=>[...document.querySelectorAll("*")].flatMap(e=>["title","placeholder","aria-label"].map(a=>e.getAttribute(a))).filter(Boolean).join("|"));
  await p.goto(PAGE); await p.waitForTimeout(2500);
@@ -16,7 +16,7 @@ const CJK=/[㐀-鿿]/;
  const left=(await vis()).split("\n").filter(l=>CJK.test(l)); ok("no CJK visible in EN except toggle",left.join()==="中文",left);
  ok("no CJK attrs EN",!CJK.test(await attrs()));
  const d=await drawn(); ok("canvas EN",!CJK.test(d.join())); console.log(d.slice(0,2),d.slice(-3));
- ok("subtitle fits",await p.evaluate(()=>{ctx.font="16px system-ui, sans-serif";return ctx.measureText(msg("chartSub",12,27844)).width})<1200);
+ ok("subtitle fits",await p.evaluate(()=>{const e=$("cTitle").children[1];return e.scrollWidth<=e.clientWidth}));
  ok("0 requests (browser-level)",net===0); console.log(await st());
  await p.screenshot({path:S+"/en.png"});
  await p.click("[data-set-lang=zh]"); 
