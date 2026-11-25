@@ -1,0 +1,13 @@
+{
+  "name": "hn-topic-race",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node tests/run.cjs",
+    "snapshot": "node scripts/snapshot.mjs"
+  },
+  "devDependencies": { "playwright-core": "1.58.2" }
+}
