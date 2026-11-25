@@ -1,4 +1,4 @@
-// The two long-run categories: embedded data, playback, form state, request-free.
+// The long-run categories: embedded data, units, new-#1 captions, playback, form state, request-free.
 const { PAGE, OUT, launch, ok, settle } = require("./helper.cjs");
 (async () => {
   const b = await launch();
@@ -8,8 +8,8 @@ const { PAGE, OUT, launch, ok, settle } = require("./helper.cjs");
     p.on("request", r => { if (!/^(file|blob|data):/.test(r.url())) reqs++; });
     await p.route(/hn\.algolia\.com/, r => r.fulfill({ json: { nbHits: 100, exhaustiveNbHits: true, hits: [] }, headers: { "access-control-allow-origin": "*" } }).catch(() => {}));
     await p.goto(PAGE); await p.waitForTimeout(300);
-    if (name === "desktop") ok("categories fit on one line", await p.$$eval(".cats label", l => new Set(l.map(x => Math.round(x.getBoundingClientRect().top))).size) === 1);
-    for (const c of ["langHist", "waveHist"]) {
+    if (name === "desktop") ok("categories fit on two lines", await p.$$eval(".cats label", l => new Set(l.map(x => Math.round(x.getBoundingClientRect().top))).size) === 2);
+    for (const c of ["langHist", "waveHist", "hireHist"]) {
       await p.check(`input[name=category][value=${c}]`, { force: true });
       const r = await p.evaluate(c => ({
         n: data.length, colors: new Set(data.map(d => d.color)).size, months: labels.length, first: labels[0],
@@ -17,8 +17,8 @@ const { PAGE, OUT, launch, ok, settle } = require("./helper.cjs");
         full: data.every(d => d.values.length === labels.length && d.values.every(v => Number.isFinite(v) && v >= 0)),
         dur: duration, playing, cat: category.value, mo: $("months").value, wnd: $("window").value, title: $("cTitle").children[0].textContent, status: $("status").textContent
       }), c);
-      ok(`${name} ${c} data`, r.n === 15 && r.colors === 15 && r.first === "2007-07" && r.months > 220 && r.contiguous && r.full, JSON.stringify(r));
-      ok(`${name} ${c} state`, r.playing && r.cat === c && r.dur <= 60000 && r.mo === "60" && r.wnd === "6" && /since 2007/.test(r.title) && /ClickHouse/.test(r.status));
+      ok(`${name} ${c} data`, r.n === 15 && r.colors === 15 && r.first === (c === "hireHist" ? "2012-06" : "2007-07") && r.months > 160 && r.contiguous && r.full, JSON.stringify(r));
+      ok(`${name} ${c} state`, r.playing && r.cat === c && r.dur <= 60000 && r.mo === "60" && r.wnd === "6" && /since 20(07|12)/.test(r.title) && /ClickHouse/.test(r.status));
       const gap = await p.$$eval("#years span", s => { const x = s.map(e => parseFloat(e.style.insetInlineStart)); return Math.min(...x.slice(1).map((v, i) => v - x[i])); });
       ok(`${name} ${c} year labels do not collide`, gap >= 44, gap);
       const t = await p.evaluate(() => { const h = $("cTitle").children[0]; return [h.scrollWidth, h.clientWidth, getComputedStyle(h).whiteSpace]; });
@@ -28,6 +28,31 @@ const { PAGE, OUT, launch, ok, settle } = require("./helper.cjs");
         await p.screenshot({ path: `${OUT}/${name}-${c}-${tag}.png` });
       }
     }
+    // captions
+    await p.check("input[name=category][value=langHist]", { force: true });
+    const at = (d, i = -1) => p.evaluate(([d, i]) => { pause(); const t = takeovers.at(i); progress = (t.at + d) / (labels.length - 1); render(progress, true); }, [d, i]).then(() => settle(p));
+    const cap = () => p.evaluate(() => [$("cNews").hidden, view.newsAlpha, $("cNews").innerText]);
+    await at(4); let c = await cap();
+    ok(`${name} caption shown, from the data`, !c[0] && c[1] === 1 && /2026-04 · new #1\s+rust passes python/i.test(c[2]), c.join());
+    const px = await p.evaluate(() => { const r = $("cNews").firstElementChild.getBoundingClientRect(), s = surface.getBoundingClientRect(); return [r.left >= s.left, r.right <= s.right + 1, r.bottom <= s.bottom, r.width > 60]; });
+    ok(`${name} caption is inside the canvas`, px.every(Boolean), px.join());
+    await at(-0.5, 0); c = await cap(); ok(`${name} no caption before the first takeover`, c[0] && c[1] === 0, c.join());
+    await at(20, 1); c = await cap(); ok(`${name} caption goes away`, c[0], c.join());
+    ok(`${name} every caption matches the numbers`, await p.evaluate(() => Object.keys(HISTORY.sets).every(s => { loadSnapshot(s); return takeovers.length >= 3 && takeovers.every(t =>
+      data.every(d => d.values[t.i] <= t.who.values[t.i]) && data.every(d => d.values[t.i - 1] <= t.over.values[t.i - 1]) && t.at >= t.i - 1 && t.at <= t.i); })));
+    // hiring: percentages, and links into that month's thread
+    await p.check("input[name=category][value=hireHist]", { force: true });
+    await p.evaluate(() => { pause(); progress = 1; render(1, true); }); await settle(p);
+    const h = await p.evaluate(() => ({ v: data.map(d => d.value.textContent), max: maxVal, ticks: [...$("ticks").children].map(t => t.textContent), href: decodeURIComponent(data[0].link.href), threads: new Set(chartSet.threads).size, n: labels.length }));
+    ok(`${name} hiring shows percentages`, h.v.every(v => /^\d+\.\d%$/.test(v)) && h.max < 100 && h.ticks.every(t => t.endsWith("%")), JSON.stringify(h.ticks));
+    ok(`${name} hiring links to the thread`, /"python"\+story:\d{8}/.test(h.href) && h.threads === h.n, h.href);
+    await p.check("input[name=category][value=db]", { force: true });
+    ok(`${name} back to plain counts`, await p.evaluate(() => takeovers.length === 0 && $("cNews").hidden && data.every(d => !d.value.textContent.includes("%")) && [...$("ticks").children].every(t => !t.textContent.includes("%"))));
+    await p.check("input[name=category][value=langHist]", { force: true }); await at(4);
+    await p.check("#mode3d", { force: true }); await p.waitForTimeout(1500);
+    c = await p.evaluate(() => [surface.id, scene.tex.has($("cNews")), scene.gl.getError()]);
+    ok(`${name} caption in 3D`, c[0] === "gl" && c[1] && c[2] === 0, c.join());
+    await p.uncheck("#mode3d", { force: true }); await p.waitForTimeout(1200);
     ok(`${name} no requests`, reqs === 0, reqs);
     await p.check("input[name=category][value=langHist]", { force: true });
     const same = await p.evaluate(() => Object.fromEntries(data.map(d => [d.name, d.color])));

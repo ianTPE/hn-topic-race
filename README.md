@@ -15,7 +15,7 @@ Other browsers show a short explanation instead of the chart, with links to the 
 
 One HTML file. No backend, no build step, no external scripts or fonts. Opening the page makes no network requests: the eight preset categories play from a snapshot embedded in the file.
 
-- **Two long races, 2007 to now**: programming languages (Lisp leads in 2007, Rust passes Python in 2026) and tech waves (Rails, iPhone, Android, Bitcoin, ChatGPT, LLMs). Also embedded.
+- **Three long races**: programming languages since 2007 (Lisp leads first, Rust passes Python in 2026), tech waves since 2007 (Rails, iPhone, Android, Bitcoin, ChatGPT, LLMs), and skills in "Who is hiring?" posts since 2012. A caption, also HTML in the canvas, marks every new #1. All embedded.
 - **Compare your own terms**: up to 15, counted live through the [HN Search API](https://hn.algolia.com/api) and cached in your browser.
 - **Check the numbers**: "Spot-check hits" lists the HN items behind a count, with links.
 - **Fixed or dynamic axis**: one scale for the whole period by default; turn on Dynamic axis and the scale follows the leaders.
@@ -62,7 +62,7 @@ npm run snapshot
 
 This runs the page's own counting code under Node (22 or newer) and rewrites only the block between `SNAPSHOT:BEGIN` and `SNAPSHOT:END` in `index.html`. A first run sends about 6,450 requests and takes about 15 minutes; the API allows 10,000 requests per hour per IP. Finished months are cached in `scripts/snapshot.cache.json` for 30 days. If any request fails, nothing is written; run it again to fill the gaps.
 
-The two long races have their own command. It sends one SQL query per race to [ClickHouse's public Hacker News dataset](https://clickhouse.com/docs/getting-started/playground), takes seconds, and rewrites only the `HISTORY` block. The page itself never contacts ClickHouse.
+The long races have their own command. It sends a few SQL queries to [ClickHouse's public Hacker News dataset](https://clickhouse.com/docs/getting-started/playground), takes seconds, and rewrites only the `HISTORY` block. The page itself never contacts ClickHouse.
 
 ```sh
 npm run history

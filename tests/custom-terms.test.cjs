@@ -33,7 +33,7 @@ await p.click(chip("custom"));const t=await p.evaluate(()=>termsToInput(CATEGORI
 // failure / typing while fetching
 await p.fill("#terms","go");await p.click("#load");await p.fill("#terms","elixir");await idle(p);ok("typed during fetch",await cat(p)==="custom"&&await val(p)==="elixir");
 // keyboard arrows
-await p.click(chip("waveHist"));await p.keyboard.press("ArrowRight");ok("arrow to custom keeps focus",await cat(p)==="custom"&&await foc(p)==="custom",await foc(p));
+await p.click(chip("hireHist"));await p.keyboard.press("ArrowRight");ok("arrow to custom keeps focus",await cat(p)==="custom"&&await foc(p)==="custom",await foc(p));
 await p.keyboard.press("ArrowRight");ok("arrow on -> model",await cat(p)==="model");await p.keyboard.press("ArrowLeft");await p.keyboard.press("Space");ok("space focuses",await foc(p)==="terms");
 await p.focus(".cats [value=custom]");await p.keyboard.press("Enter");ok("enter focuses",await foc(p)==="terms");
 await p.click("[data-set-lang=zh]");await p.click(chip("model"));await p.click(chip("custom"));ok("zh hint",/按 Enter/.test(await st(p)),await st(p));await p.click("[data-set-lang=en]");ok("re-render hint",/press Enter/.test(await st(p)));
