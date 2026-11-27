@@ -6,9 +6,9 @@ Running a regular LLM over years of HN comments did not make sense. It would be 
 
 ## Why "go" is hard to count
 
-"go" is mostly a verb. In October 2026, HN had 357,093 posts and comments. 13,807 contained the word "go", and only 147 wrote "golang". In a random sample of 80 "go" items, only 4 were about the language (about 5%, though the sample is small).
+Searching for "go" on Hacker News is like trying to count mentions of the band "The Who" by searching for "who". Almost everything you get back is ordinary English. In October 2026, nearly 14,000 posts and comments contained the word "go", while fewer than 150 wrote "golang". In a quick sample of 80 "go" posts, only 4 were about the programming language, roughly 1 in 20.
 
-At first I thought people used to write "go" loosely and switched to "golang" later to avoid confusion, since that is what I do myself. When we checked the data, that was not true. Among posts with clear Go clues (`golang`, `goroutine`, `go.mod`, and similar), the share containing "golang" was 12–13% in 2010–2011, went up to 21–24% in 2012–2019, and fell back to 12% in 2026 (Jan–Nov). My guess is the move from `golang.org` to `go.dev` mattered, and Go is well-known enough on HN now that people just write "Go". Either way, counting "golang" alone was not an option.
+At first I assumed people wrote "go" loosely in the early days and gradually switched to "golang" to avoid confusion, because that is what I do myself. When we checked the data, that was not true. Among posts that clearly talk about Go (mentioning `golang`, `goroutine`, `go.mod`, and similar), "golang" only showed up in about 1 in 8 posts at the start, rose to roughly a quarter during the 2010s, and by 2026 (Jan–Nov) fell back to 1 in 8. Moving the official site from `golang.org` to `go.dev` probably played a part, and Go is familiar enough on HN now that people just call it "Go". So counting "golang" alone would miss most of the picture.
 
 ## Filtering first, then using a decision model
 
