@@ -117,9 +117,21 @@ So Go is slightly undercounted: about 1,500 missed by the model and about 3,000 
 
 **Cost.** The model was [Jev](https://openrouter.ai/docs/guides/community/jev) from TypeSafe, at $0.042 per million input tokens with free output. About 450 tokens per item made 107 million tokens, about **$4.50**, and about 80 minutes at 8 requests in parallel. The rules matter: judging all 886,281 items would cost about four times as much.
 
-On the same 80 test items, these decision models made no mistakes: Jev, `perplexity/pplx-decider-v1.2` (about a third of Jev's cost per item), `microsoft/microsoft-decision-1.1` and `liquid/d1-ultra`. The cheaper `perplexity/pplx-decider-flash-v1.2`, `cloudflare/clef-flash` and Google's Gemini Decision 1 each counted a product named "Opencode Go" as the language. OpenRouter had no free version of the ones tried. Gemini Decision 1 is free in Google AI Studio, but limited to 10,000 requests a day.
+**Other decision models.** Four more were run on the same judged-group sample (494 items, threshold 0.7), with the same question, snippets and thread titles:
 
-**The long race could include Go too.** Since November 2009, 2.1 million items contain "go". With the same rules and model that would be about 570,000 judged items and roughly $11. It has not been done, only because it costs money.
+| Model | Precision | Recall | Tokens per item | Price per million input tokens | 236,278 items | Long race (about 570,000) |
+|---|---|---|---|---|---|---|
+| TypeSafe Jev (used) | 100% | 97.7% | 450 | $0.042 | $4.50 (paid) | about $11 |
+| Perplexity `pplx-decider-v1.2` | 100% | 97.7% | 234 | $0.02 | about $1.10 | about $2.70 |
+| Alibaba Model Studio `decision-model` | 99.2% | 99.2% | 223 | ¥0.30 | about $2.20 | about $5.30 |
+| Volcengine Ark `doubao-seed-2-1-lite-260915` | 100% | 98.5% | 450 | ¥0.80 | about $12 | about $28 |
+| Alibaba Model Studio `decision-model-preview` | 51.6% | 99.2% | 170 | not listed | not usable | not usable |
+
+Costs other than Jev's are estimates from list prices and the measured tokens, at about ¥7.2 to the dollar; Perplexity's price is its OpenRouter list price. The preview model judged 121 verbs as Go. Ark's System One API needs the header `ark-beta-systemone-api: true`; Model Studio's endpoint includes your workspace ID (`https://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/systemone`).
+
+An earlier, smaller test (80 items, whole texts) also found no mistakes from `microsoft/microsoft-decision-1.1` and `liquid/d1-ultra`, while `perplexity/pplx-decider-flash-v1.2`, `cloudflare/clef-flash` and Google's Gemini Decision 1 each counted a product named "Opencode Go" as the language. OpenRouter had no free version of the ones tried. Gemini Decision 1 is free in Google AI Studio, but limited to 10,000 requests a day.
+
+**The long race could include Go too.** Since November 2009, 2.1 million items contain "go"; with the same rules about 570,000 would need the model. With Perplexity's decider that is roughly $3. It has not been done, only because it costs money.
 
 To redo it, put `TYPESAFE_API_KEY` or `PERPLEXITY_API_KEY` in `.env` (the script uses Jev first and switches to Perplexity when the Jev balance runs out), then:
 
