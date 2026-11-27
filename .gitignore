@@ -3,3 +3,4 @@ scripts/snapshot.cache.json
 *.tmp
 .env
 scripts/go-cache/
+.obsidian/
