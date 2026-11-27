@@ -12,24 +12,21 @@ At first I assumed people wrote "go" loosely in the early days and gradually swi
 
 ## Filtering first, then using a decision model
 
-We pulled every post and comment containing "go" from October 2021 to October 2026 (61 months, 886,281 items) from [ClickHouse's public HN dataset](https://clickhouse.com/docs/getting-started/playground).
+We pulled five years of HN posts and comments containing "go" (October 2021 to October 2026, nearly 900,000 items) from [ClickHouse's public HN dataset](https://clickhouse.com/docs/getting-started/playground).
 
-Before calling any model, regex rules split the data into three groups:
-- 14,115 items with clear language clues (`golang`, `goroutine`, `go.mod`, "written in Go", etc.) were counted directly.
-- 635,787 items where "go" only appeared in lowercase verb phrases (`to go`, `let's go`, `go ahead`, etc.) were dropped.
-- 236,278 items (27%) were sent to the decision model.
+Before paying a model to read all of them, we used regex as a coarse sieve. Obvious Go posts (`golang`, `goroutine`, `go.mod`, "written in Go") went straight into the yes pile. Obvious lowercase verb phrases (`to go`, `let's go`, `go ahead`) went straight into the trash, which cleared out almost three-quarters of the data. Only the messy quarter in the middle (about 236,000 items) went to the decision model.
 
-Before running the full batch, we spot-checked samples from the two rule groups. That caught some ugly bugs in the first version. The auto-count regex tried to catch Go CLI commands, so it matched "go get a job" and "go work at" (26 out of 82 were wrong, 32%). On the other side, the drop rules threw out "Rust or Go" and "Swift or Go", losing about 1% of real Go mentions. After tightening the rules, the auto-count sample was 54/54, and the dropped sample missed 2 out of 400 (0.5%).
+Checking a small sample before the full run caught some funny bugs in our first rules. The rule for Go CLI commands thought "go get a job" and "go work at" were about Go, so nearly a third of that sample (26 of 82) was just normal English. On the other side, the verb filter accidentally threw out "Rust or Go" and "Swift or Go". After tightening both rules, the auto-count sample was clean (54 of 54), and the verb filter only missed 2 out of 400.
 
-For the 236,278 remaining items, we sent about 300 characters around "go" plus the root thread title (walking up `parent` IDs, up to 50 levels deep). At a probability threshold of 0.7, TypeSafe's Jev marked 62,428 as Go, giving 76,543 total.
+For the remaining 236,000 items, we did not send full comments. We clipped a short window around "go" (about 300 characters) and attached the thread's root title by walking up `parent` IDs (sometimes 50 replies deep). A comment saying "go" under a thread about Go compilers means something very different from one under a thread about travel. Anything scoring 0.7 or higher counted as Go, bringing the five-year total to about 76,500 mentions.
 
 ## Accuracy and comparing models
 
-To check accuracy, Kimi and MiniMax each labeled a 500-item sample from the judged group, and we kept the 494 items where they agreed. At threshold 0.7, Jev got 127/127 precision (100%) and 127/130 recall (97.7%). Including the small leak from the dropped group, Go is undercounted by about 6% overall.
+To see how well TypeSafe's Jev actually did, we had Kimi and MiniMax label 500 items from the ambiguous pile and scored the 494 where both agreed. At threshold 0.7, Jev had no false positives (127 of 127) and caught 127 of 130 real Go mentions. Adding in the tiny leak from the verb filter, Go is probably undercounted by around 6% overall.
 
-One caveat is that the labels came from models, not humans. Looking at Jev's three misses, two were actually mislabeled by both Kimi and MiniMax: "Go look at…" is a verb, and "the book is officially a go" is an idiom.
+One caveat: those test labels came from models, not humans. Looking at Jev's three misses, two were actually mislabeled by both Kimi and MiniMax: "Go look at…" is a verb, and "the book is officially a go" is an idiom.
 
-We also tested four other decision models on the same 494-item sample with the same snippets and threshold:
+We also ran four other decision models on the same 494-item sample with the same snippets and threshold:
 
 | Model | Precision | Recall | Tokens per item | Price per million input tokens | 236,278 items | Long race (about 570,000) |
 |---|---|---|---|---|---|---|
@@ -41,12 +38,12 @@ We also tested four other decision models on the same 494-item sample with the s
 
 Costs other than Jev's $4.50 are estimates from list prices and measured tokens (at about ¥7.2 per dollar). Perplexity's price is its OpenRouter list price.
 
-The four working models had very similar accuracy, while the cost differed by more than 10x (Perplexity is around $1.10 for the 60-month run, Volcengine Ark around $12). Alibaba's preview model marked 121 verbs as Go, so it was not usable.
+All four working models had almost the same accuracy, while the cost varied by more than 10x (roughly $1.10 with Perplexity vs. around $12 with Volcengine Ark). Alibaba's preview model called 121 verbs "Go", so it was not usable.
 
 ## Result
 
-The Jev run used 107 million input tokens, cost about $4.50, and took around 80 minutes.
+The full Jev run processed about 107 million input tokens, cost roughly $4.50, and finished in about 80 minutes.
 
-In the 3-month rolling window ending October 2026 (August–October), Go lands at #4 among programming languages, at about 40% of Rust's share and right next to Java. That confirms it really did not belong off the chart. The long race back to 2009 is doable too (around $3 with Perplexity); I just have not run it yet.
+In the 3-month rolling window ending October 2026 (August–October), Go lands at #4 among programming languages, at about 40% of Rust's share and right next to Java. That confirmed it really did not belong off the chart. Doing the long race back to 2009 is doable too (around $3 with Perplexity); I just have not run it yet.
 
-The script is in [`scripts/go.mjs`](../scripts/go.mjs), with more details in the [README](../README.md). My native language is Chinese, so I used AI to help translate my notes into English.
+The script is in [`scripts/go.mjs`](../scripts/go.mjs), with the full breakdown in the [README](../README.md). My native language is Chinese, so I used AI to help translate my notes into English.
