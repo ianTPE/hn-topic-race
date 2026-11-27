@@ -1,3 +1,5 @@
 node_modules/
 scripts/snapshot.cache.json
 *.tmp
+.env
+scripts/go-cache/

@@ -86,6 +86,51 @@ The **3D** switch moves the same elements to a second, WebGL 2 canvas with `move
 
 The page's Methodology section has the details, including which ambiguous terms were left out of the presets.
 
+### Go
+
+"go" is usually an English verb, and most people write "Go", not "golang", so a search for it counts mostly verbs. The 60-month Languages preset counts Go with a decision model instead (a model that answers a yes/no question with a probability and writes no text). `scripts/go.mjs` does it in three steps:
+
+1. It takes every post and comment containing "go" from [ClickHouse's public Hacker News dataset](https://clickhouse.com/docs/getting-started/playground) and sorts them with rules:
+   - **counted**: clear signs of the language, such as golang, goroutine, go.mod, `go vet`, Go 1.22 or "written in Go";
+   - **dropped**: every "go" is a lowercase verb, such as to go, let's go or go ahead;
+   - **judged**: everything else.
+2. For each judged item, the model gets about 300 characters around each "go" and the title of its thread. It counts as Go at a probability of 0.7 or more.
+3. The monthly counts go into the `GO_COUNTS` block of `index.html`. The page divides them by the same monthly totals as every other term. "Fetch data" does not query `go`, and the current, unfinished month is left out of its bar.
+
+From October 2021 to October 2026 (61 finished months), 886,281 items contained "go":
+
+| Group | Items | Result |
+|---|---|---|
+| Counted by rule | 14,115 | all counted |
+| Dropped by rule | 635,787 | none counted |
+| Judged by the model | 236,278 | 62,428 counted |
+
+**Accuracy.** Samples from each group were labeled by two other models (Kimi and MiniMax). Only items where both agreed were scored; in the judged samples they disagreed on 6 of 500, which were left out.
+
+| Group | Sample | Result |
+|---|---|---|
+| Counted by rule | 54 | all were Go |
+| Dropped by rule | 400 | 2 were Go (0.5%) |
+| Judged, threshold 0.7 | 494 | precision 100% (127 of 127), recall 97.7% (127 of 130) |
+
+So Go is slightly undercounted: about 1,500 missed by the model and about 3,000 dropped by the rules, against about 76,500 counted, roughly 6% in all. The dropped-group estimate comes from only two hits in 400 items, so treat it as rough. One of the three misses in the judged sample was in fact a verb ("Go look at…") that both labeling models got wrong.
+
+**Cost.** The model was [Jev](https://openrouter.ai/docs/guides/community/jev) from TypeSafe, at $0.042 per million input tokens with free output. About 450 tokens per item made 107 million tokens, about **$4.50**, and about 80 minutes at 8 requests in parallel. The rules matter: judging all 886,281 items would cost about four times as much.
+
+On the same 80 test items, these decision models made no mistakes: Jev, `perplexity/pplx-decider-v1.2` (about a third of Jev's cost per item), `microsoft/microsoft-decision-1.1` and `liquid/d1-ultra`. The cheaper `perplexity/pplx-decider-flash-v1.2`, `cloudflare/clef-flash` and Google's Gemini Decision 1 each counted a product named "Opencode Go" as the language. OpenRouter had no free version of the ones tried. Gemini Decision 1 is free in Google AI Studio, but limited to 10,000 requests a day.
+
+**The long race could include Go too.** Since November 2009, 2.1 million items contain "go". With the same rules and model that would be about 570,000 judged items and roughly $11. It has not been done, only because it costs money.
+
+To redo it, put `TYPESAFE_API_KEY` or `PERPLEXITY_API_KEY` in `.env` (the script uses Jev first and switches to Perplexity when the Jev balance runs out), then:
+
+```sh
+node scripts/go.mjs fetch    # free: SQL against ClickHouse, sorts items into the three groups
+node scripts/go.mjs roots    # free: finds each comment's thread title
+node scripts/go.mjs judge    # costs money; resumable, results cached in scripts/go-cache/
+node scripts/go.mjs write    # rewrites only the GO_COUNTS block
+npm run snapshot
+```
+
 ## Refresh the snapshot
 
 ```sh
