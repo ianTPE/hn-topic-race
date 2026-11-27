@@ -1,50 +1,35 @@
 # Counting "Go" on Hacker News, using a Jev-like decision model
 
-I built a bar chart race of what Hacker News talks about ([2D](https://iantpe.github.io/hn-topic-race/?cat=lang), [3D](https://iantpe.github.io/hn-topic-race/?cat=lang&view=3d)). For a long time, the programming languages chart left out Go.
+I made a bar chart race of Hacker News topics ([2D](https://iantpe.github.io/hn-topic-race/?cat=lang), [3D](https://iantpe.github.io/hn-topic-race/?cat=lang&view=3d)). The programming languages chart was missing Go, and that bothered me. A language chart without Go just looked incomplete (and after adding it, Go turned out to be #4). I am a bit obsessive about things like this, so I wanted to find a way to include it.
 
-The reason is obvious: "go" is one of the most common verbs in English. In October 2026 alone, HN had 357,093 posts and comments. 13,807 contained the word "go", while only 147 wrote "golang". In a random sample of 80 "go" items, only 4 were about the language (roughly 5%, though the sample is small).
+Running a regular LLM over years of HN comments did not make sense. It would be slow and wasteful. I knew a Jev-like decision model might work here, because it only returns a yes/no probability instead of generating text, and you only pay for input tokens. So I talked it through with Claude Code. Claude wrote the scripts and bounced the design and validation off Gemini, Kimi, and MiniMax along the way.
 
-## My guess was wrong
+## Why "go" is hard to count
 
-Before checking the data, I assumed people used to write "go" loosely, and as the language got popular, more people switched to "golang" to avoid confusion. That is what I do myself, so it seemed likely.
+"go" is mostly a verb. In October 2026, HN had 357,093 posts and comments. 13,807 contained the word "go", and only 147 wrote "golang". In a random sample of 80 "go" items, only 4 were about the language (about 5%, though the sample is small).
 
-The numbers showed the opposite. Among posts with clear Go signals (`golang`, `goroutine`, `go.mod`, and similar), the share containing "golang" was 12–13% in 2010–2011, rose to 21–24% from 2012 through 2019, and dropped back to 12% in 2026 (Jan–Nov).
+At first I thought people used to write "go" loosely and switched to "golang" later to avoid confusion, since that is what I do myself. When we checked the data, that was not true. Among posts with clear Go clues (`golang`, `goroutine`, `go.mod`, and similar), the share containing "golang" was 12–13% in 2010–2011, went up to 21–24% in 2012–2019, and fell back to 12% in 2026 (Jan–Nov). My guess is the move from `golang.org` to `go.dev` mattered, and Go is well-known enough on HN now that people just write "Go". Either way, counting "golang" alone was not an option.
 
-Two things probably explain it: the official site moved from `golang.org` to `go.dev`, and Go became well-known enough on HN that people stopped feeling the need to clarify it. Either way, counting "golang" alone would not work, and neither would a plain keyword search.
+## Filtering first, then using a decision model
 
-## Rules plus a decision model
+We pulled every post and comment containing "go" from October 2021 to October 2026 (61 months, 886,281 items) from [ClickHouse's public HN dataset](https://clickhouse.com/docs/getting-started/playground).
 
-I pulled every post and comment containing "go" from October 2021 to October 2026 (61 months, 886,281 items) from [ClickHouse's public HN dataset](https://clickhouse.com/docs/getting-started/playground) and split them into three buckets with regex rules:
+Before calling any model, regex rules split the data into three groups:
+- 14,115 items with clear language clues (`golang`, `goroutine`, `go.mod`, "written in Go", etc.) were counted directly.
+- 635,787 items where "go" only appeared in lowercase verb phrases (`to go`, `let's go`, `go ahead`, etc.) were dropped.
+- 236,278 items (27%) were sent to the decision model.
 
-- **Count directly (14,115):** clear language cues like `golang`, `goroutine`, `go.mod`, or "written in Go".
-- **Drop directly (635,787):** lowercase verb phrases only, like `to go`, `let's go`, or `go ahead`.
-- **Send to a model (236,278, or 27%):** everything else.
+Before running the full batch, we spot-checked samples from the two rule groups. That caught some ugly bugs in the first version. The auto-count regex tried to catch Go CLI commands, so it matched "go get a job" and "go work at" (26 out of 82 were wrong, 32%). On the other side, the drop rules threw out "Rust or Go" and "Swift or Go", losing about 1% of real Go mentions. After tightening the rules, the auto-count sample was 54/54, and the dropped sample missed 2 out of 400 (0.5%).
 
-Instead of a regular LLM, I used a **decision model**. You give it a yes/no question and it returns a probability, with no generated text. You pay only for input tokens; output is free.
+For the 236,278 remaining items, we sent about 300 characters around "go" plus the root thread title (walking up `parent` IDs, up to 50 levels deep). At a probability threshold of 0.7, TypeSafe's Jev marked 62,428 as Go, giving 76,543 total.
 
-For each of the 236,278 remaining items, I sent about 300 characters around "go" along with the thread's root title (walking up `parent` IDs, up to 50 levels deep). Anything scoring 0.7 or higher counted as Go. That added 62,428 items, for 76,543 in total.
+## Accuracy and comparing models
 
-## Spot-checking before the full run saved me
+To check accuracy, Kimi and MiniMax each labeled a 500-item sample from the judged group, and we kept the 494 items where they agreed. At threshold 0.7, Jev got 127/127 precision (100%) and 127/130 recall (97.7%). Including the small leak from the dropped group, Go is undercounted by about 6% overall.
 
-Before the full run, I checked samples from the two rule buckets. It caught problems in both.
+One caveat is that the labels came from models, not humans. Looking at Jev's three misses, two were actually mislabeled by both Kimi and MiniMax: "Go look at…" is a verb, and "the book is officially a go" is an idiom.
 
-My first auto-count regex tried to match Go CLI commands, so it also matched phrases like "go get a job" and "go work at". Out of 82 items in that sample, 26 were normal English (a 32% error rate).
-
-The drop rules had the opposite problem. They threw out phrases like "Rust or Go" and "Swift or Go", missing about 1% of real Go mentions. Because the dropped bucket is huge, even a 1% leak adds up.
-
-After fixing the rules, the auto-count sample was 54 for 54, and the dropped bucket missed only 2 out of 400 (0.5%). Catching that before the full run saved both money and a redo.
-
-## Accuracy
-
-To check the model, I had two other models (Kimi and MiniMax) label a 500-item sample from the judged bucket and kept the 494 items where both agreed.
-
-At threshold 0.7, TypeSafe's Jev had 100% precision (127 of 127) and 97.7% recall (127 of 130). Combining model misses with the small leak from the dropped bucket, Go is undercounted by roughly 6% overall.
-
-One limitation: the labels came from models, not humans. Looking at Jev's three misses, two of them were actually mislabeled by both Kimi and MiniMax: "Go look at…" is a verb, and "the book is officially a go" is an English idiom.
-
-## Comparing five decision models
-
-I ran four other decision models on the same 494-item sample with the same snippets and threshold:
+We also tested four other decision models on the same 494-item sample with the same snippets and threshold:
 
 | Model | Precision | Recall | Tokens per item | Price per million input tokens | 236,278 items | Long race (about 570,000) |
 |---|---|---|---|---|---|---|
@@ -56,14 +41,12 @@ I ran four other decision models on the same 494-item sample with the same snipp
 
 Costs other than Jev's $4.50 are estimates from list prices and measured tokens (at about ¥7.2 per dollar). Perplexity's price is its OpenRouter list price.
 
-Accuracy was almost identical across the four working models, while price varied by more than 10x. Perplexity's `pplx-decider-v1.2` was the cheapest at roughly $1.10 for the 60-month run, compared to about $12 on Volcengine Ark. Alibaba's preview model flagged 121 verbs as Go, so it is not usable.
+The four working models had very similar accuracy, while the cost differed by more than 10x (Perplexity is around $1.10 for the 60-month run, Volcengine Ark around $12). Alibaba's preview model marked 121 verbs as Go, so it was not usable.
 
-## Results and cost
+## Result
 
-The full Jev run processed 107 million input tokens, cost about **$4.50**, and took about 80 minutes.
+The Jev run used 107 million input tokens, cost about $4.50, and took around 80 minutes.
 
-With Go added, it ranks **#4** among programming languages in the 3-month rolling window ending October 2026 (August–October). Its share is about 40% of Rust's, right alongside Java. Running the long race back to 2009 is doable too (around $3 with Perplexity); I just have not done it yet.
+In the 3-month rolling window ending October 2026 (August–October), Go lands at #4 among programming languages, at about 40% of Rust's share and right next to Java. That confirms it really did not belong off the chart. The long race back to 2009 is doable too (around $3 with Perplexity); I just have not run it yet.
 
-## Tools
-
-I wrote the scripts and ran the analysis with Claude Code, used Jev for the main classification run, and used Kimi and MiniMax for validation labels. My native language is Chinese, so I also used AI to help translate my notes into English. The pipeline is in [`scripts/go.mjs`](../scripts/go.mjs), with setup and notes in the [README](../README.md).
+The script is in [`scripts/go.mjs`](../scripts/go.mjs), with more details in the [README](../README.md). My native language is Chinese, so I used AI to help translate my notes into English.
