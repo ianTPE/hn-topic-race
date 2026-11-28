@@ -48,11 +48,14 @@ const { PAGE, OUT, launch, ok, settle } = require("./helper.cjs");
       const sets = [0.05, 0.3, 0.6, 0.9, 1].map(frame);
       return { n: data.length, shown: shown(), inertHidden: data.filter(d => d.row.inert).every(d => d.alpha === 0), sets: new Set(sets).size,
         input: parseTerms().length, cat: category.value, title: $("cTitle").children[0].textContent, status: $("status").textContent,
-        rowH: ROW_H, fits: TOP + 15 * ROW_H <= PLOT_BOTTOM + 0.5, colorsOk: data.every(d => /^#[0-9a-f]{6}$/.test(d.color)) };
+        rowH: ROW_H, fits: TOP + 15 * ROW_H <= PLOT_BOTTOM + 0.5, colorsOk: data.every(d => /^#[0-9a-f]{6}$/.test(d.color)),
+        first: labels[0], times: data.every(d => /^×\d+(\.\d)?$/.test(d.value.textContent)), ticks: [...$("ticks").children].map(t => t.textContent),
+        noBarAtOne: data.filter(d => d.curVal <= 0).every(d => d.row.style.getPropertyValue("--len") === "0px") };
     });
+    ok(`${name} hardware growth: ×N values, log ticks, starts a year in`, hw.first === "2008-07" && hw.times && hw.ticks[0] === "×1" && hw.ticks.length >= 3 && hw.ticks.every(t => /^×\d+(\.\d)?$/.test(t)) && hw.noBarAtOne, JSON.stringify([hw.first, hw.ticks]));
     ok(`${name} hardware pool, top 15 drawn`, hw.n > 15 && hw.shown === 15 && hw.inertHidden && hw.fits && hw.colorsOk, JSON.stringify(hw));
     ok(`${name} hardware terms come and go`, hw.sets >= 4, hw.sets);
-    ok(`${name} hardware form and status`, hw.input === 15 && hw.cat === "hwHist" && /Hardware since 2007/.test(hw.title) && /top 15 shown each month/.test(hw.status), hw.status);
+    ok(`${name} hardware form and status`, hw.input === 15 && hw.cat === "hwHist" && /Hardware growth since 2008/.test(hw.title) && /top 15 shown each month/.test(hw.status), hw.status);
     ok(`${name} hardware tab order skips terms off the chart`, await p.evaluate(() => [...$("rows").children].slice(15).every(r => r.inert) && [...$("rows").children].slice(0, 15).every(r => !r.inert)));
     for (const [at, tag] of [[.02, "start"], [.45, "mid"], [1, "end"]]) {
       await p.evaluate(x => { pause(); progress = x; render(x, true); }, at); await settle(p);

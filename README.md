@@ -15,8 +15,8 @@ Other browsers show a short explanation instead of the chart, with links to the 
 
 One HTML file. No backend, no build step, no external scripts or fonts. Opening the page makes no network requests: the eight preset categories play from a snapshot embedded in the file.
 
-- **Four long races**: programming languages since 2007 (Lisp leads first, Rust passes Python in 2026), tech waves since 2007 (Rails, iPhone, Android, Bitcoin, ChatGPT, LLMs), hardware since 2007, and skills in "Who is hiring?" posts since 2012. A caption, also HTML in the canvas, marks every new #1. All embedded.
-- **Hardware since 2007** draws from a pool of 30 terms and shows the top 15 at each moment, so terms enter and leave: multicore, Itanium and Larrabee fade out; TPU, HBM, Cerebras, space data centers and models etched into silicon come in. See [Hardware](#hardware).
+- **Four long races**: programming languages since 2007 (Lisp leads first, Rust passes Python in 2026), tech waves since 2007 (Rails, iPhone, Android, Bitcoin, ChatGPT, LLMs), hardware growth since 2008, and skills in "Who is hiring?" posts since 2012. A caption, also HTML in the canvas, marks every new #1. All embedded.
+- **Hardware growth since 2008** ranks how many times more a term is mentioned than a year earlier, so new directions (TPU, chiplets, Cerebras, space data centers, models etched into silicon) can pass old platforms that are simply used a lot. It draws from a pool of 33 terms and shows the top 15 at each moment, so terms enter and leave. See [Hardware](#hardware).
 - **Compare your own terms**: up to 15, counted live through the [HN Search API](https://hn.algolia.com/api) and cached in your browser.
 - **Check the numbers**: "Spot-check hits" lists the HN items behind a count, with links.
 - **Fixed or dynamic axis**: one scale for the whole period by default; turn on Dynamic axis and the scale follows the leaders.
@@ -146,14 +146,16 @@ npm run snapshot
 
 ### Hardware
 
-The hardware race asks where hardware is heading, so it is built differently from the other long races:
+The hardware race asks where hardware is heading, so it ranks **growth, not volume**:
 
-- **More terms than bars.** The pool has 30 terms; the page shows the 15 most mentioned at each moment. A term that drops out slides down and fades, and can't be clicked or tabbed to until it comes back.
-- **No x86, ARM or SSD.** They are today's platforms, stay in the top three for twenty years, and would push the newcomers off the chart.
+- **Times as many as a year ago.** For each term: mentions per million (rolling 6 months) divided by the same figure 12 months earlier, so the race starts in 2008. Old, widely used platforms such as x86, ARM, SSD and Apple Silicon are talked about a lot but rarely grow fast, so they are in the pool and new directions can still pass them. 20 per million is added to both sides, so a term going from 0 to 2 isn't "infinitely" bigger.
+- **Log scale.** The data holds log2 of the ratio, so bars are on a log axis (×1, ×4, ×16) and a term at ×1 or below has no bar.
+- **More terms than bars.** The pool has 33 terms; the page shows the 15 fastest-growing at each moment. A term that drops out slides down and fades, and can't be clicked or tabbed to until it comes back.
 - **Rules, not searches.** Counted with SQL on ClickHouse, like the other long races, so matching can be case-sensitive (CUDA, TPU, HBM, DRAM) and can join spellings (Cerebras and "wafer-scale"; Taalas and "model on a chip"; "space data center" and "orbital datacenter").
-- **Colours repeat.** Thirty terms share 15 colours. `npm run history` picks colours so that terms on screen together rarely match, weighting recent months and neighbouring ranks most, and prints the pairs that still do. In the latest months the only one is apple silicon (#1) and hbm (#13).
+- **Colours repeat.** 33 terms share 15 colours, and with growth the chart changes often, so some month always has a repeat. `npm run history` picks colours so that neighbouring ranks rarely match (weighted by 1 ÷ rank gap squared, a little more in recent months), and prints the pairs that still meet.
+- **Growth also catches endings.** A product being cancelled gets talked about too: Optane leads briefly in late 2022, when Intel wound it down.
 
-What it shows, in short: multicore and quantum computing trade first place until 2012; FPGA and ASIC trade it in 2013, the year Bitcoin mining moved to ASICs; FPGA leads most of 2014–2020, with quantum computing passing it briefly; then Apple Silicon, RISC-V and CUDA take turns. By late 2026 DRAM is second (the memory shortage), space data centers are sixth, and HBM and models etched into silicon have entered the top 15.
+What it shows, in short: SSDs, CUDA, memristors and ARM lead in 2008–2010; ASICs in 2013 (Bitcoin mining); RISC-V from 2014, then NVMe, HBM, Optane and TPU in 2015–2017; chiplets and Cerebras in 2018–2020; Apple Silicon in 2020; AI accelerators and Groq in 2023–2024; space data centers and Cerebras in 2025. In August 2026 models etched into silicon (Taalas) take first place at about ×7, ahead of space data centers, HBM and DRAM.
 
 ## Refresh the snapshot
 

@@ -1,4 +1,4 @@
-// 更新 index.html 內嵌的長期資料（2007 至今的程式語言、科技浪潮、硬體，加 2012 至今的徵才）。
+// 更新 index.html 內嵌的長期資料（2007 至今的程式語言、科技浪潮，2008 至今的硬體成長，加 2012 至今的徵才）。
 // 用法：npm run history
 //
 // Algolia 要跑幾千次查詢，這裡改用 ClickHouse 公開的 HN 資料庫（免登入，每個類別一兩次請求、幾秒鐘）。
@@ -63,11 +63,17 @@ for (const [name, terms] of Object.entries(GROUPS)) {
   addSet(name, terms, rows, { from: FROM, least: 1000, per: 1e6, digits: 0 });
 }
 
-// -------- 硬體：詞庫比 15 個多，頁面每個月只顯示前 15 名，掉出去的淡出、新進的從下面滑上來 --------
+// -------- 硬體：比成長，不比聲量 --------
+// 每個詞的聲量（每百萬則，滾動 6 個月）÷ 12 個月前的聲量，存成 log2，頁面畫成對數刻度的倍數（×1、×2、×4…）。
+// 分子分母都先加 GROW_FLOOR，小詞從 0 變 2 才不會變成「無限倍」。量大的老平台（x86、ARM、SSD）也收：它們討論多，但倍數不大
+// 詞庫比 15 個多，頁面每個月只顯示前 15 名，掉出去的淡出、新進的從下面滑上來
 // o 是原文（CUDA、TPU、HBM 這類要分大小寫），s 是小寫。詞的順序不影響顏色：顏色另外排，見 colorsFor()
-// 不收 x86、ARM、SSD：它們是現在這一代的平台，二十年都在前三名，會把新進的詞擠出榜外
+const GROW_LAG = 12, GROW_FLOOR = 20;
 const HW_MATCH = (col, re) => `match(${col},'${re.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}')`;
 const HW = {
+  "x86": HW_MATCH("s", String.raw`\b(x86(_64|-64)?|amd64|x64)\b`),
+  "arm": HW_MATCH("o", String.raw`\bARM(64|v[0-9]+)?\b|\b(aarch64|Arm Neoverse|Arm-based|Arm chips?|Arm cores?)\b`),
+  "ssd": HW_MATCH("o", String.raw`\bSSDs?\b`),
   "multicore": HW_MATCH("s", String.raw`\b(multi-?core|many-?core)\b`),
   "itanium": HW_MATCH("s", String.raw`\bitanium\b`),
   "cell": HW_MATCH("o", String.raw`\bCell (processor|BE|B\.E\.|chip|SPEs?|SPUs?)\b|\bPS3.{0,40}\b(SPEs?|SPUs?)\b`),
@@ -78,7 +84,7 @@ const HW = {
   "nvme": HW_MATCH("s", String.raw`\bnvme\b`),
   "optane / 3d xpoint": HW_MATCH("s", String.raw`\b(optane|3d ?xpoint)\b`),
   "risc-v": HW_MATCH("s", String.raw`\b(risc-?v|riscv(32|64)?)\b`),
-  "apple silicon": HW_MATCH("o", String.raw`\b(Apple Silicon|apple silicon|M1 (Mac|Max|Pro|Ultra|chip)|M[1-5] (Max|Ultra))\b`),
+  "apple silicon": HW_MATCH("o", String.raw`\b(Apple Silicon|apple silicon|M[1-9] (Mac|Max|Pro|Ultra|chips?))\b`),
   "tpu": HW_MATCH("o", String.raw`\bTPUs?\b`),
   "npu": HW_MATCH("o", String.raw`\bNPUs?\b`),
   "ai accelerator": HW_MATCH("s", String.raw`\b(ai|ml|inference|training|neural) (chips?|accelerators?|asics?|processors?)\b`),
@@ -101,15 +107,15 @@ const HW = {
 };
 const VISIBLE = 15;                     // 與頁面的 VISIBLE 相同
 // 顏色：詞庫比 15 色多，一定要重複用。兩個詞同時在前 15 名（而且都有長條）的月數越多，越不能同色；
-// 越近的月份權重越高，現在的畫面最乾淨；名次相鄰的權重也越高。多種起始順序各自用貪婪法排，再換色、互換顏色直到不再改善，取最好的一組。
+// 越近的月份權重稍高；名次越近權重越高（÷ 名次差的平方），並排的同色最容易搞混。多種起始順序各自用貪婪法排，再換色、互換顏色直到不再改善，取最好的一組。
 // 剩下的撞色會印出來
-function colorsFor(data) {
+function colorsFor(data, labels) {
   const n = data.length, months = data[0][1].length, w = Array.from({ length: n }, () => new Array(n).fill(0));
   const onAt = k => data.map((d, i) => [d[1][k], i]).sort((a, b) => b[0] - a[0]).slice(0, VISIBLE).filter(x => x[0] > 0).map(x => x[1]);
-  // 名次相鄰的兩列同色最容易搞混，離得越遠越不要緊：再乘上 1 ÷ 名次差
+  // 比成長時詞進出榜很頻繁，每個月幾乎都有同色，先避開並排的；只偏重最近的月份會讓早年的並排同色變三倍
   for (let k = 0; k < months; k++) {
-    const on = onAt(k), weight = 1 + 1000 * (k / (months - 1)) ** 6;    // 2007 年算 1，最近一個月算 1001
-    on.forEach((a, ra) => on.forEach((b, rb) => { if (a !== b) w[a][b] += weight / Math.abs(ra - rb); }));
+    const on = onAt(k), weight = 1 + 10 * (k / (months - 1)) ** 2;      // 第一個月算 1，最近一個月算 11
+    on.forEach((a, ra) => on.forEach((b, rb) => { if (a !== b) w[a][b] += weight / (ra - rb) ** 2; }));
   }
   const C = [...Array(VISIBLE).keys()];
   const cost = (i, c, color) => color.reduce((sum, cj, j) => sum + (cj === c && j !== i ? w[i][j] : 0), 0);
@@ -141,7 +147,7 @@ function colorsFor(data) {
   for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) if (best[a] === best[b] && w[a][b] > 0) {
     const both = [];
     for (let k = 0; k < months; k++) { const on = onAt(k); if (on.includes(a) && on.includes(b)) both.push(k); }
-    clash.push(`${data[a][0]} ＝ ${data[b][0]}：${both.length} 個月（最後 ${2007 + Math.floor((both.at(-1) + 6) / 12)} 年）`);
+    clash.push(`${data[a][0]} ＝ ${data[b][0]}：${both.length} 個月（最後 ${labels[both.at(-1)].slice(0, 4)} 年）`);
   }
   console.log(`hwHist 同色又同時在榜上：${clash.length ? clash.join("、") : "沒有"}`);
   return best;
@@ -154,8 +160,11 @@ function colorsFor(data) {
                 FROM hackernews_history FINAL
                 WHERE dead = 0 AND deleted = 0 AND type IN ('story','comment') AND time >= toDateTime('${FROM} 00:00:00','UTC')))
     GROUP BY m ORDER BY m`);
-  addSet("hwHist", terms, rows, { from: FROM, least: 1000, per: 1e6, digits: 0 });
-  sets.hwHist = { ...sets.hwHist, colors: colorsFor(sets.hwHist.data), visible: VISIBLE };
+  addSet("hwHist", terms, rows, { from: FROM, least: 1000, per: 1e6, digits: 3 });
+  const { labels, data } = sets.hwHist;
+  const grown = data.map(([t, v]) => [t, v.slice(GROW_LAG).map((x, k) => +Math.log2((x + GROW_FLOOR) / (v[k] + GROW_FLOOR)).toFixed(3))]);
+  sets.hwHist = { labels: labels.slice(GROW_LAG), data: grown, unit: "growth", lag: GROW_LAG, colors: colorsFor(grown, labels.slice(GROW_LAG)), visible: VISIBLE };
+  console.log(`hwHist：改成 ${GROW_LAG} 個月成長倍數，${sets.hwHist.labels[0]} → ${sets.hwHist.labels.at(-1)}`);
 }
 
 // -------- 徵才：每月「Ask HN: Who is hiring?」底下第一層留言，一則就是一篇徵才文 --------
