@@ -100,6 +100,8 @@ const HW = {
   "cheri": HW_MATCH("o", String.raw`\bCHERI(oT)?\b`),
   "cerebras / wafer-scale": HW_MATCH("s", String.raw`\b(cerebras|wafer-?scale)\b`),
   "groq": `(${HW_MATCH("s", String.raw`\bgroq\b`)} AND NOT ${HW_MATCH("s", String.raw`\bgrok\b`)})`,
+  // LPU：Groq 的 language processing unit，2026 起 NVIDIA 也賣（Groq 3 LPU）；學界的 least publishable unit 不算
+  "lpu": `(${HW_MATCH("o", String.raw`\bLPUs?\b`)} OR ${HW_MATCH("s", String.raw`\blanguage processing units?\b`)}) AND NOT ${HW_MATCH("s", String.raw`\bleast publishable\b`)}`,
   "tenstorrent": HW_MATCH("s", String.raw`\btenstorrent\b`),
   "taalas / model-on-chip": HW_MATCH("s", String.raw`\btaalas\b|\b(models? (etched|baked|hard-?wired) (in|into) (the )?silicon|model[- ]on[- ](a[- ])?chip|hard-?wired (llm|model|weights))\b`),
   "in-memory compute": HW_MATCH("s", String.raw`\b(in-memory comput\w*|compute-in-memory|processing[- ]in[- ]memory|near-memory comput\w*)\b`),
