@@ -40,6 +40,30 @@ const { PAGE, OUT, launch, ok, settle } = require("./helper.cjs");
     await at(20, 1); c = await cap(); ok(`${name} caption goes away`, c[0], c.join());
     ok(`${name} every caption matches the numbers`, await p.evaluate(() => Object.keys(HISTORY.sets).every(s => { loadSnapshot(s); return takeovers.length >= 3 && takeovers.every(t =>
       data.every(d => d.values[t.i] <= t.who.values[t.i]) && data.every(d => d.values[t.i - 1] <= t.over.values[t.i - 1]) && t.at >= t.i - 1 && t.at <= t.i); })));
+    // hardware: a pool larger than 15, only the top 15 drawn; others slide out, can't be focused, and come back
+    await p.check("input[name=category][value=hwHist]", { force: true });
+    const hw = await p.evaluate(() => {
+      const shown = () => data.filter(d => d.alpha > 0 && !d.row.inert).length;
+      const frame = x => { pause(); progress = x; render(x, true); return data.filter(d => !d.row.inert).map(d => d.name).sort().join(); };
+      const sets = [0.05, 0.3, 0.6, 0.9, 1].map(frame);
+      return { n: data.length, shown: shown(), inertHidden: data.filter(d => d.row.inert).every(d => d.alpha === 0), sets: new Set(sets).size,
+        input: parseTerms().length, cat: category.value, title: $("cTitle").children[0].textContent, status: $("status").textContent,
+        rowH: ROW_H, fits: TOP + 15 * ROW_H <= PLOT_BOTTOM + 0.5, colorsOk: data.every(d => /^#[0-9a-f]{6}$/.test(d.color)) };
+    });
+    ok(`${name} hardware pool, top 15 drawn`, hw.n > 15 && hw.shown === 15 && hw.inertHidden && hw.fits && hw.colorsOk, JSON.stringify(hw));
+    ok(`${name} hardware terms come and go`, hw.sets >= 4, hw.sets);
+    ok(`${name} hardware form and status`, hw.input === 15 && hw.cat === "hwHist" && /Hardware since 2007/.test(hw.title) && /top 15 shown each month/.test(hw.status), hw.status);
+    ok(`${name} hardware tab order skips terms off the chart`, await p.evaluate(() => [...$("rows").children].slice(15).every(r => r.inert) && [...$("rows").children].slice(0, 15).every(r => !r.inert)));
+    for (const [at, tag] of [[.02, "start"], [.45, "mid"], [1, "end"]]) {
+      await p.evaluate(x => { pause(); progress = x; render(x, true); }, at); await settle(p);
+      await p.screenshot({ path: `${OUT}/${name}-hwHist-${tag}.png` });
+    }
+    // mid-transition: a row that left keeps fading, and nothing is drawn under the plot
+    await p.check("#mode3d", { force: true }); await p.waitForTimeout(1500);
+    const g3 = await p.evaluate(() => [surface.id, scene.gl.getError(), data.filter(d => d.row.inert).every(d => !scene.tex.has(d.row) || d.alpha === 0)]);
+    ok(`${name} hardware in 3D`, g3[0] === "gl" && g3[1] === 0 && g3[2], g3.join());
+    await p.screenshot({ path: `${OUT}/${name}-hwHist-3d.png` });
+    await p.uncheck("#mode3d", { force: true }); await p.waitForTimeout(1200);
     // hiring: percentages, and links into that month's thread
     await p.check("input[name=category][value=hireHist]", { force: true });
     await p.evaluate(() => { pause(); progress = 1; render(1, true); }); await settle(p);

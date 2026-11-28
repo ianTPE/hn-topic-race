@@ -15,7 +15,8 @@ Other browsers show a short explanation instead of the chart, with links to the 
 
 One HTML file. No backend, no build step, no external scripts or fonts. Opening the page makes no network requests: the eight preset categories play from a snapshot embedded in the file.
 
-- **Three long races**: programming languages since 2007 (Lisp leads first, Rust passes Python in 2026), tech waves since 2007 (Rails, iPhone, Android, Bitcoin, ChatGPT, LLMs), and skills in "Who is hiring?" posts since 2012. A caption, also HTML in the canvas, marks every new #1. All embedded.
+- **Four long races**: programming languages since 2007 (Lisp leads first, Rust passes Python in 2026), tech waves since 2007 (Rails, iPhone, Android, Bitcoin, ChatGPT, LLMs), hardware since 2007, and skills in "Who is hiring?" posts since 2012. A caption, also HTML in the canvas, marks every new #1. All embedded.
+- **Hardware since 2007** draws from a pool of 30 terms and shows the top 15 at each moment, so terms enter and leave: multicore, Itanium and Larrabee fade out; TPU, HBM, Cerebras, space data centers and models etched into silicon come in. See [Hardware](#hardware).
 - **Compare your own terms**: up to 15, counted live through the [HN Search API](https://hn.algolia.com/api) and cached in your browser.
 - **Check the numbers**: "Spot-check hits" lists the HN items behind a count, with links.
 - **Fixed or dynamic axis**: one scale for the whole period by default; turn on Dynamic axis and the scale follows the leaders.
@@ -54,7 +55,7 @@ Fork or clone it; the page is one file, [`index.html`](index.html), and there is
 
 Then run `npm run snapshot` to fill in its numbers.
 
-**Change a long race:** edit the terms and rules in `scripts/history.mjs`, then run `npm run history`.
+**Change a long race:** edit the terms and rules in `scripts/history.mjs`, then run `npm run history`. A race can have more than 15 terms, like `HW` (hardware): give its set `visible: 15` and the page shows the top 15 at each moment.
 
 **Publish it:** on GitHub, Settings → Pages → Deploy from a branch → `main`, `/ (root)`. Replace the three `iantpe.github.io` addresses at the top of `index.html` with yours, and point the two "Source code" links at your repository.
 
@@ -142,6 +143,17 @@ node scripts/go.mjs judge    # costs money; resumable, results cached in scripts
 node scripts/go.mjs write    # rewrites only the GO_COUNTS block
 npm run snapshot
 ```
+
+### Hardware
+
+The hardware race asks where hardware is heading, so it is built differently from the other long races:
+
+- **More terms than bars.** The pool has 30 terms; the page shows the 15 most mentioned at each moment. A term that drops out slides down and fades, and can't be clicked or tabbed to until it comes back.
+- **No x86, ARM or SSD.** They are today's platforms, stay in the top three for twenty years, and would push the newcomers off the chart.
+- **Rules, not searches.** Counted with SQL on ClickHouse, like the other long races, so matching can be case-sensitive (CUDA, TPU, HBM, DRAM) and can join spellings (Cerebras and "wafer-scale"; Taalas and "model on a chip"; "space data center" and "orbital datacenter").
+- **Colours repeat.** Thirty terms share 15 colours. `npm run history` picks colours so that terms on screen together rarely match, weighting recent months and neighbouring ranks most, and prints the pairs that still do. In the latest months the only one is apple silicon (#1) and hbm (#13).
+
+What it shows, in short: multicore and quantum computing trade first place until 2012; FPGA and ASIC trade it in 2013, the year Bitcoin mining moved to ASICs; FPGA leads most of 2014–2020, with quantum computing passing it briefly; then Apple Silicon, RISC-V and CUDA take turns. By late 2026 DRAM is second (the memory shortage), space data centers are sixth, and HBM and models etched into silicon have entered the top 15.
 
 ## Refresh the snapshot
 
