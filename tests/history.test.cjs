@@ -40,41 +40,43 @@ const { PAGE, OUT, launch, ok, settle } = require("./helper.cjs");
     await at(20, 1); c = await cap(); ok(`${name} caption goes away`, c[0], c.join());
     ok(`${name} every caption matches the numbers`, await p.evaluate(() => Object.keys(HISTORY.sets).every(s => { loadSnapshot(s); return takeovers.length >= 3 && takeovers.every(t =>
       data.every(d => d.values[t.i] <= t.who.values[t.i]) && data.every(d => d.values[t.i - 1] <= t.over.values[t.i - 1]) && t.at >= t.i - 1 && t.at <= t.i); })));
-    // hardware: a pool larger than 15, only the top 15 drawn; others slide out, can't be focused, and come back
-    await p.check("input[name=category][value=hwHist]", { force: true });
-    const hw = await p.evaluate(() => {
-      const shown = () => data.filter(d => d.alpha > 0 && !d.row.inert).length;
+    // hardware growth: three charts of at most 15 terms; every term in exactly one, its own colour, all shown, one minute
+    const hwSets = ["cpuHist", "hwHist", "memHist"];
+    ok(`${name} hardware terms split without overlap`, await p.evaluate(s => { const all = s.flatMap(c => Object.keys(HISTORY.sets[c].data)); return all.length === 34 && new Set(all).size === 34; }, hwSets));
+    for (const c of hwSets) {
+      await p.check(`input[name=category][value=${c}]`, { force: true });
+      const g = await p.evaluate(() => { pause(); progress = 1; render(1, true);
+        return { n: data.length, inert: data.filter(d => d.row.inert).length, colors: new Set(data.map(d => d.color)).size, first: labels[0], oneMinute: duration === 60000,
+          names: data.every(d => [...d.row.querySelectorAll("*")].every(e => e.scrollWidth <= e.clientWidth + 1)),
+          titleFits: (h => h.scrollWidth <= h.clientWidth)($("cTitle").children[0]), input: parseTerms().length,
+          title: $("cTitle").children[0].textContent, status: $("status").textContent, times: data.every(d => /^×\d+(\.\d)?$/.test(d.value.textContent)),
+          ticks: [...$("ticks").children].map(t => t.textContent), noBarAtOne: data.filter(d => d.curVal <= 0).every(d => d.row.style.getPropertyValue("--len") === "0px") }; });
+      ok(`${name} ${c} growth: all shown, own colours, ×N values, log ticks, one minute`, g.n <= 15 && g.n >= 10 && g.inert === 0 && g.colors === g.n && g.input === g.n && g.first === "2008-07" && g.oneMinute && g.times &&
+        g.ticks[0] === "×1" && g.ticks.length >= 3 && g.ticks.every(t => /^×\d+(\.\d)?$/.test(t)) && g.noBarAtOne && (name === "phone" || g.names) && g.titleFits &&
+        /growth since 2008/.test(g.title) && /how many times more/.test(g.status) && !/top 15/.test(g.status), JSON.stringify(g));
+      for (const [at, tag] of [[.45, "mid"], [1, "end"]]) {
+        await p.evaluate(x => { pause(); progress = x; render(x, true); }, at); await settle(p);
+        await p.screenshot({ path: `${OUT}/${name}-${c}-${tag}.png` });
+      }
+    }
+    // a pool larger than 15 (the mechanism stays for future sets): only the top 15 drawn; others slide out, can't be focused, and come back
+    const pool = await p.evaluate(() => {
+      const a = HISTORY.sets.cpuHist, b = HISTORY.sets.hwHist;
+      HISTORY.sets.poolTest = { ...b, data: { ...a.data, ...b.data }, colors: [...a.colors, ...b.colors], visible: 15, msPerMonth: 900 };
+      const radio = Object.assign(document.createElement("input"), { type: "radio", name: "category", value: "poolTest", hidden: true });
+      document.querySelector(".cats").append(radio);
+      loadSnapshot("poolTest");
       const frame = x => { pause(); progress = x; render(x, true); return data.filter(d => !d.row.inert).map(d => d.name).sort().join(); };
       const sets = [0.05, 0.3, 0.6, 0.9, 1].map(frame);
-      return { n: data.length, shown: shown(), inertHidden: data.filter(d => d.row.inert).every(d => d.alpha === 0), sets: new Set(sets).size,
-        input: parseTerms().length, cat: category.value, title: $("cTitle").children[0].textContent, status: $("status").textContent,
-        rowH: ROW_H, fits: TOP + 15 * ROW_H <= PLOT_BOTTOM + 0.5, colorsOk: data.every(d => /^#[0-9a-f]{6}$/.test(d.color)),
-        first: labels[0], slow: duration === labels.length * 900 && duration > 60000, times: data.every(d => /^×\d+(\.\d)?$/.test(d.value.textContent)), ticks: [...$("ticks").children].map(t => t.textContent),
-        noBarAtOne: data.filter(d => d.curVal <= 0).every(d => d.row.style.getPropertyValue("--len") === "0px") };
+      const r = { n: data.length, shown: data.filter(d => d.alpha > 0 && !d.row.inert).length, inertHidden: data.filter(d => d.row.inert).every(d => d.alpha === 0), sets: new Set(sets).size,
+        input: parseTerms().length, slow: duration === labels.length * 900, status: $("status").textContent, fits: TOP + 15 * ROW_H <= PLOT_BOTTOM + 0.5,
+        tab: [...$("rows").children].slice(15).every(r => r.inert) && [...$("rows").children].slice(0, 15).every(r => !r.inert) };
+      delete HISTORY.sets.poolTest; radio.remove();
+      return r;
     });
-    ok(`${name} hardware growth: ×N values, log ticks, starts a year in, 0.9 s a month`, hw.first === "2008-07" && hw.slow && hw.times && hw.ticks[0] === "×1" && hw.ticks.length >= 3 && hw.ticks.every(t => /^×\d+(\.\d)?$/.test(t)) && hw.noBarAtOne, JSON.stringify([hw.first, hw.ticks]));
-    ok(`${name} hardware pool, top 15 drawn`, hw.n > 15 && hw.shown === 15 && hw.inertHidden && hw.fits && hw.colorsOk, JSON.stringify(hw));
-    ok(`${name} hardware terms come and go`, hw.sets >= 4, hw.sets);
-    ok(`${name} hardware form and status`, hw.input === 15 && hw.cat === "hwHist" && /Chip growth since 2008/.test(hw.title) && /top 15 shown each month/.test(hw.status), hw.status);
-    ok(`${name} hardware tab order skips terms off the chart`, await p.evaluate(() => [...$("rows").children].slice(15).every(r => r.inert) && [...$("rows").children].slice(0, 15).every(r => !r.inert)));
-    for (const [at, tag] of [[.02, "start"], [.45, "mid"], [1, "end"]]) {
-      await p.evaluate(x => { pause(); progress = x; render(x, true); }, at); await settle(p);
-      await p.screenshot({ path: `${OUT}/${name}-hwHist-${tag}.png` });
-    }
-    // memory & infrastructure: the other half of hardware, few enough terms that all are shown, each its own colour
-    await p.check("input[name=category][value=memHist]", { force: true });
-    const mem = await p.evaluate(() => { pause(); progress = 1; render(1, true);
-      return { n: data.length, inert: data.filter(d => d.row.inert).length, colors: new Set(data.map(d => d.color)).size, first: labels[0], slow: duration === labels.length * 900,
-        names: data.every(d => d.name.length > 0 && [...d.row.querySelectorAll("*")].every(e => e.scrollWidth <= e.clientWidth + 1)),
-        titleFits: (h => h.scrollWidth <= h.clientWidth)($("cTitle").children[0]),
-        title: $("cTitle").children[0].textContent, status: $("status").textContent, times: data.every(d => /^×\d+(\.\d)?$/.test(d.value.textContent)),
-        hw: Object.keys(HISTORY.sets.hwHist.data).filter(t => t in HISTORY.sets.memHist.data) }; });
-    ok(`${name} memory growth: all terms shown, own colours, no overlap with chips`, mem.n === 12 && mem.inert === 0 && mem.colors === 12 && mem.first === "2008-07" && mem.slow && mem.times && mem.hw.length === 0 && (name === "phone" || mem.names) && mem.titleFits &&
-      /Memory growth since 2008/.test(mem.title) && !/top 15/.test(mem.status), JSON.stringify(mem));
-    await p.evaluate(x => { pause(); progress = 1; render(1, true); }); await settle(p);
-    await p.screenshot({ path: `${OUT}/${name}-memHist-end.png` });
+    ok(`${name} pool larger than 15: top 15 drawn, the rest inert, terms come and go, slower`, pool.n === 22 && pool.shown === 15 && pool.inertHidden && pool.sets >= 4 && pool.input === 15 && pool.slow && pool.fits && pool.tab && /top 15 shown each month/.test(pool.status), JSON.stringify(pool));
     await p.check("input[name=category][value=hwHist]", { force: true });
-    // mid-transition: a row that left keeps fading, and nothing is drawn under the plot
+    // growth in 3D: bars of terms at ×1 or below are flat, no GL error
     await p.check("#mode3d", { force: true }); await p.waitForTimeout(1500);
     const g3 = await p.evaluate(() => [surface.id, scene.gl.getError(), data.filter(d => d.row.inert).every(d => !scene.tex.has(d.row) || d.alpha === 0)]);
     ok(`${name} hardware in 3D`, g3[0] === "gl" && g3[1] === 0 && g3[2], g3.join());

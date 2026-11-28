@@ -108,8 +108,13 @@ const HW = {
   "in-memory compute": HW_MATCH("s", String.raw`\b(in-memory comput\w*|compute-in-memory|processing[- ]in[- ]memory|near-memory comput\w*)\b`),
   "space datacenter": HW_MATCH("s", String.raw`\b(space|orbital|orbiting) data ?cent(er|re)s?\b|\bdata ?cent(er|re)s? in (space|orbit)\b`)
 };
-// 記憶體與基礎設施：存資料、搬資料、製造與擺放晶片的東西；其餘是晶片（算的東西）
-const HW_MEM = new Set(["ssd", "nvme", "optane / 3d xpoint", "dram", "hbm", "cxl", "memristor", "in-memory compute", "chiplet", "euv", "photonics", "space datacenter"]);
+// 分三張：處理器（通用架構與新的運算方式）、AI 晶片（加速器）、記憶體與基礎設施（存資料、搬資料、製造與擺放晶片的東西）
+// 每張都不超過 15 個詞，全部顯示、各有顏色。超過 15 個的話頁面只畫前 15 名（visible），並放慢播放
+const HW_GROUPS = {
+  cpuHist: ["x86", "arm", "risc-v", "apple silicon", "multicore", "itanium", "cell", "larrabee / xeon phi", "cheri", "quantum computing", "neuromorphic"],
+  hwHist: ["cuda", "fpga", "asic", "tpu", "npu", "lpu", "ai accelerator", "cerebras / wafer-scale", "groq", "tenstorrent", "taalas / model-on-chip"],
+  memHist: ["ssd", "nvme", "optane / 3d xpoint", "dram", "hbm", "cxl", "memristor", "in-memory compute", "chiplet", "euv", "photonics", "space datacenter"]
+};
 const VISIBLE = 15;                     // 與頁面的 VISIBLE 相同
 // 顏色：詞庫比 15 色多，一定要重複用。兩個詞同時在前 15 名（而且都有長條）的月數越多，越不能同色；
 // 越近的月份權重稍高；名次越近權重越高（÷ 名次差的平方），並排的同色最容易搞混。多種起始順序各自用貪婪法排，再換色、互換顏色直到不再改善，取最好的一組。
@@ -169,12 +174,14 @@ function colorsFor(data, labels, name) {
   const { labels, data } = sets.hw;
   delete sets.hw;
   const grown = data.map(([t, v]) => [t, v.slice(GROW_LAG).map((x, k) => +Math.log2((x + GROW_FLOOR) / (v[k] + GROW_FLOOR)).toFixed(3))]);
-  // 分兩張：晶片（算的東西）與記憶體和基礎設施（存、搬、造、放的東西）。全放一張時 34 個詞搶 15 格，看不出方向
-  for (const [name, keep] of [["hwHist", t => !HW_MEM.has(t)], ["memHist", t => HW_MEM.has(t)]]) {
-    const part = grown.filter(([t]) => keep(t)), at = labels.slice(GROW_LAG);
-    // 倍數每個月都在變、詞進出榜頻繁，播慢一點：每個月 0.9 秒（其他長期排名一共只播一分鐘）
-    sets[name] = { labels: at, data: part, unit: "growth", lag: GROW_LAG, msPerMonth: 900, colors: colorsFor(part, at, name),
-      ...(part.length > VISIBLE ? { visible: VISIBLE } : {}) };
+  // 全放一張時 34 個詞搶 15 格，看不出方向；每個詞都要分到某一張
+  const grouped = Object.values(HW_GROUPS).flat();
+  if (grouped.length !== terms.length || terms.some(t => !grouped.includes(t))) throw new Error("HW_GROUPS 要剛好包含 HW 的每個詞");
+  for (const [name, list] of Object.entries(HW_GROUPS)) {
+    const part = list.map(t => grown.find(g => g[0] === t)), at = labels.slice(GROW_LAG);
+    // 詞比 15 個多時，每個月都有詞進出榜，播慢一點：每個月 0.9 秒。全部都在榜上的（記憶體）照其他長期排名，一共一分鐘
+    sets[name] = { labels: at, data: part, unit: "growth", lag: GROW_LAG, colors: colorsFor(part, at, name),
+      ...(part.length > VISIBLE ? { visible: VISIBLE, msPerMonth: 900 } : {}) };
     console.log(`${name}：${part.length} 詞，${GROW_LAG} 個月成長倍數，${at[0]} → ${at.at(-1)}`);
   }
 }
