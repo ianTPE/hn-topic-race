@@ -84,7 +84,8 @@ const HW = {
   "nvme": HW_MATCH("s", String.raw`\bnvme\b`),
   "optane / 3d xpoint": HW_MATCH("s", String.raw`\b(optane|3d ?xpoint)\b`),
   "risc-v": HW_MATCH("s", String.raw`\b(risc-?v|riscv(32|64)?)\b`),
-  "apple silicon": HW_MATCH("o", String.raw`\b(Apple Silicon|apple silicon|M[1-9] (Mac|Max|Pro|Ultra|chips?))\b`),
+  // M1 之後的 Mac 晶片才算 M 系列；之前的「M7 chip」是 iPhone 的動作協同處理器
+  "apple silicon": `(${HW_MATCH("o", String.raw`\b(Apple Silicon|apple silicon)\b`)} OR (time >= toDateTime('2020-06-01 00:00:00','UTC') AND ${HW_MATCH("o", String.raw`\bM[1-9] (Mac|Max|Pro|Ultra|chips?)\b`)}))`,
   "tpu": HW_MATCH("o", String.raw`\bTPUs?\b`),
   "npu": HW_MATCH("o", String.raw`\bNPUs?\b`),
   "ai accelerator": HW_MATCH("s", String.raw`\b(ai|ml|inference|training|neural) (chips?|accelerators?|asics?|processors?)\b`),
@@ -165,7 +166,8 @@ function colorsFor(data, labels) {
   addSet("hwHist", terms, rows, { from: FROM, least: 1000, per: 1e6, digits: 3 });
   const { labels, data } = sets.hwHist;
   const grown = data.map(([t, v]) => [t, v.slice(GROW_LAG).map((x, k) => +Math.log2((x + GROW_FLOOR) / (v[k] + GROW_FLOOR)).toFixed(3))]);
-  sets.hwHist = { labels: labels.slice(GROW_LAG), data: grown, unit: "growth", lag: GROW_LAG, colors: colorsFor(grown, labels.slice(GROW_LAG)), visible: VISIBLE };
+  // 倍數每個月都在變、詞進出榜頻繁，播慢一點：每個月 0.6 秒（其他長期排名一共只播一分鐘）
+  sets.hwHist = { labels: labels.slice(GROW_LAG), data: grown, unit: "growth", lag: GROW_LAG, msPerMonth: 600, colors: colorsFor(grown, labels.slice(GROW_LAG)), visible: VISIBLE };
   console.log(`hwHist：改成 ${GROW_LAG} 個月成長倍數，${sets.hwHist.labels[0]} → ${sets.hwHist.labels.at(-1)}`);
 }
 
