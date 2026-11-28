@@ -49,18 +49,31 @@ const { PAGE, OUT, launch, ok, settle } = require("./helper.cjs");
       return { n: data.length, shown: shown(), inertHidden: data.filter(d => d.row.inert).every(d => d.alpha === 0), sets: new Set(sets).size,
         input: parseTerms().length, cat: category.value, title: $("cTitle").children[0].textContent, status: $("status").textContent,
         rowH: ROW_H, fits: TOP + 15 * ROW_H <= PLOT_BOTTOM + 0.5, colorsOk: data.every(d => /^#[0-9a-f]{6}$/.test(d.color)),
-        first: labels[0], slow: duration === labels.length * 600 && duration > 60000, times: data.every(d => /^×\d+(\.\d)?$/.test(d.value.textContent)), ticks: [...$("ticks").children].map(t => t.textContent),
+        first: labels[0], slow: duration === labels.length * 900 && duration > 60000, times: data.every(d => /^×\d+(\.\d)?$/.test(d.value.textContent)), ticks: [...$("ticks").children].map(t => t.textContent),
         noBarAtOne: data.filter(d => d.curVal <= 0).every(d => d.row.style.getPropertyValue("--len") === "0px") };
     });
-    ok(`${name} hardware growth: ×N values, log ticks, starts a year in, 0.6 s a month`, hw.first === "2008-07" && hw.slow && hw.times && hw.ticks[0] === "×1" && hw.ticks.length >= 3 && hw.ticks.every(t => /^×\d+(\.\d)?$/.test(t)) && hw.noBarAtOne, JSON.stringify([hw.first, hw.ticks]));
+    ok(`${name} hardware growth: ×N values, log ticks, starts a year in, 0.9 s a month`, hw.first === "2008-07" && hw.slow && hw.times && hw.ticks[0] === "×1" && hw.ticks.length >= 3 && hw.ticks.every(t => /^×\d+(\.\d)?$/.test(t)) && hw.noBarAtOne, JSON.stringify([hw.first, hw.ticks]));
     ok(`${name} hardware pool, top 15 drawn`, hw.n > 15 && hw.shown === 15 && hw.inertHidden && hw.fits && hw.colorsOk, JSON.stringify(hw));
     ok(`${name} hardware terms come and go`, hw.sets >= 4, hw.sets);
-    ok(`${name} hardware form and status`, hw.input === 15 && hw.cat === "hwHist" && /Hardware growth since 2008/.test(hw.title) && /top 15 shown each month/.test(hw.status), hw.status);
+    ok(`${name} hardware form and status`, hw.input === 15 && hw.cat === "hwHist" && /Chip growth since 2008/.test(hw.title) && /top 15 shown each month/.test(hw.status), hw.status);
     ok(`${name} hardware tab order skips terms off the chart`, await p.evaluate(() => [...$("rows").children].slice(15).every(r => r.inert) && [...$("rows").children].slice(0, 15).every(r => !r.inert)));
     for (const [at, tag] of [[.02, "start"], [.45, "mid"], [1, "end"]]) {
       await p.evaluate(x => { pause(); progress = x; render(x, true); }, at); await settle(p);
       await p.screenshot({ path: `${OUT}/${name}-hwHist-${tag}.png` });
     }
+    // memory & infrastructure: the other half of hardware, few enough terms that all are shown, each its own colour
+    await p.check("input[name=category][value=memHist]", { force: true });
+    const mem = await p.evaluate(() => { pause(); progress = 1; render(1, true);
+      return { n: data.length, inert: data.filter(d => d.row.inert).length, colors: new Set(data.map(d => d.color)).size, first: labels[0], slow: duration === labels.length * 900,
+        names: data.every(d => d.name.length > 0 && [...d.row.querySelectorAll("*")].every(e => e.scrollWidth <= e.clientWidth + 1)),
+        titleFits: (h => h.scrollWidth <= h.clientWidth)($("cTitle").children[0]),
+        title: $("cTitle").children[0].textContent, status: $("status").textContent, times: data.every(d => /^×\d+(\.\d)?$/.test(d.value.textContent)),
+        hw: Object.keys(HISTORY.sets.hwHist.data).filter(t => t in HISTORY.sets.memHist.data) }; });
+    ok(`${name} memory growth: all terms shown, own colours, no overlap with chips`, mem.n === 12 && mem.inert === 0 && mem.colors === 12 && mem.first === "2008-07" && mem.slow && mem.times && mem.hw.length === 0 && (name === "phone" || mem.names) && mem.titleFits &&
+      /Memory growth since 2008/.test(mem.title) && !/top 15/.test(mem.status), JSON.stringify(mem));
+    await p.evaluate(x => { pause(); progress = 1; render(1, true); }); await settle(p);
+    await p.screenshot({ path: `${OUT}/${name}-memHist-end.png` });
+    await p.check("input[name=category][value=hwHist]", { force: true });
     // mid-transition: a row that left keeps fading, and nothing is drawn under the plot
     await p.check("#mode3d", { force: true }); await p.waitForTimeout(1500);
     const g3 = await p.evaluate(() => [surface.id, scene.gl.getError(), data.filter(d => d.row.inert).every(d => !scene.tex.has(d.row) || d.alpha === 0)]);

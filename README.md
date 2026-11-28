@@ -15,8 +15,8 @@ Other browsers show a short explanation instead of the chart, with links to the 
 
 One HTML file. No backend, no build step, no external scripts or fonts. Opening the page makes no network requests: the eight preset categories play from a snapshot embedded in the file.
 
-- **Four long races**: programming languages since 2007 (Lisp leads first, Rust passes Python in 2026), tech waves since 2007 (Rails, iPhone, Android, Bitcoin, ChatGPT, LLMs), hardware growth since 2008, and skills in "Who is hiring?" posts since 2012. A caption, also HTML in the canvas, marks every new #1. All embedded.
-- **Hardware growth since 2008** ranks how many times more a term is mentioned than a year earlier, so new directions (TPU, chiplets, Cerebras, space data centers, models etched into silicon) can pass old platforms that are simply used a lot. It draws from a pool of 34 terms and shows the top 15 at each moment, so terms enter and leave. See [Hardware](#hardware).
+- **Four long races**: programming languages since 2007 (Lisp leads first, Rust passes Python in 2026), tech waves since 2007 (Rails, iPhone, Android, Bitcoin, ChatGPT, LLMs), chip and memory growth since 2008, and skills in "Who is hiring?" posts since 2012. A caption, also HTML in the canvas, marks every new #1. All embedded.
+- **Chip growth and memory growth since 2008** rank how many times more a term is mentioned than a year earlier, so new directions (TPU, Cerebras, LPU, models etched into silicon; HBM, space data centers) can pass old platforms that are simply used a lot. Hardware is split in two so each chart has room: chips draw from 22 terms and show the top 15 at each moment, so terms enter and leave; memory & infrastructure has 12. See [Hardware](#hardware).
 - **Compare your own terms**: up to 15, counted live through the [HN Search API](https://hn.algolia.com/api) and cached in your browser.
 - **Check the numbers**: "Spot-check hits" lists the HN items behind a count, with links.
 - **Fixed or dynamic axis**: one scale for the whole period by default; turn on Dynamic axis and the scale follows the leaders.
@@ -146,17 +146,17 @@ npm run snapshot
 
 ### Hardware
 
-The hardware race asks where hardware is heading, so it ranks **growth, not volume**:
+The two hardware races ask where hardware is heading, so they rank **growth, not volume**:
 
 - **Times as many as a year ago.** For each term: mentions per million (rolling 6 months) divided by the same figure 12 months earlier, so the race starts in 2008. Old, widely used platforms such as x86, ARM, SSD and Apple Silicon are talked about a lot but rarely grow fast, so they are in the pool and new directions can still pass them. 20 per million is added to both sides, so a term going from 0 to 2 isn't "infinitely" bigger.
 - **Log scale.** The data holds log2 of the ratio, so bars are on a log axis (×1, ×4, ×16) and a term at ×1 or below has no bar.
-- **More terms than bars.** The pool has 34 terms; the page shows the 15 fastest-growing at each moment. A term that drops out slides down and fades, and can't be clicked or tabbed to until it comes back.
+- **Two charts.** With all 34 terms in one chart, 15 slots were too few to see a direction. **Chips** (`hwHist`) is what computes: CPU architectures, GPUs and AI accelerators, 22 terms, the 15 fastest-growing shown at each moment; a term that drops out slides down and fades, and can't be clicked or tabbed to until it comes back. **Memory & infrastructure** (`memHist`) is what stores, moves, makes and houses them: DRAM, HBM, SSD, NVMe, Optane, CXL, memristors, in-memory compute, chiplets, EUV, photonics and space data centers, 12 terms, all shown. The split is `HW_MEM` in `scripts/history.mjs`; both come from one query.
 - **Rules, not searches.** Counted with SQL on ClickHouse, like the other long races, so matching can be case-sensitive (CUDA, TPU, HBM, DRAM) and can join spellings (Cerebras and "wafer-scale"; Taalas and "model on a chip"; "space data center" and "orbital datacenter"; LPU and "language processing unit", but not "least publishable unit").
-- **Colours repeat.** 34 terms share 15 colours, and with growth the chart changes often, so some month always has a repeat. `npm run history` picks colours so that neighbouring ranks rarely match (weighted by 1 ÷ rank gap squared, a little more in recent months), and prints the pairs that still meet.
-- **Slower playback.** Growth changes every month and terms enter and leave often, so this race plays at 0.6 s a month (about 2 min 13 s) instead of fitting into one minute like the other long races. A set can set its own pace with `msPerMonth`.
+- **Colours repeat in the chip chart.** 22 terms share 15 colours, and with growth the chart changes often, so some month always has a repeat; the memory chart has a colour per term. `npm run history` picks colours so that neighbouring ranks rarely match (weighted by 1 ÷ rank gap squared, a little more in recent months), and prints the pairs that still meet.
+- **Slower playback.** Growth changes every month and terms enter and leave often, so these races play at 0.9 s a month (about 3 min 20 s) instead of fitting into one minute like the other long races. A set can set its own pace with `msPerMonth`.
 - **Growth also catches endings.** A product being cancelled gets talked about too: Optane leads briefly in late 2022, when Intel wound it down.
 
-What it shows, in short: SSDs, CUDA, memristors and ARM lead in 2008–2010; ASICs in 2013 (Bitcoin mining); RISC-V from 2014, then NVMe, HBM, Optane and TPU in 2015–2017; chiplets and Cerebras in 2018–2020; Apple Silicon in 2020; AI accelerators and Groq in 2023–2024; space data centers and Cerebras in 2025. In August 2026 models etched into silicon (Taalas) take first place at about ×7, ahead of space data centers, HBM and DRAM.
+What it shows, in short. **Chips:** CUDA, ARM, quantum computing and Itanium trade first place in 2008–2011; ASICs in 2012–2013 (Bitcoin mining); RISC-V from 2014, TPU in 2016; Cerebras in 2019; Apple Silicon from 2020; AI accelerators and Cerebras in 2023; Groq in 2024; Cerebras again in 2025; LPU in January 2026 (Nvidia licensing Groq), then models etched into silicon (Taalas) from February 2026, at about ×7 by November. **Memory & infrastructure:** SSDs and memristors lead early; NVMe, HBM and Optane in 2015–2018; chiplets and EUV around 2018–2021; CXL in 2021–2023; HBM from mid-2023 (the AI build-out); space data centers from mid-2025, now about ×4, ahead of HBM and DRAM.
 
 ## Refresh the snapshot
 

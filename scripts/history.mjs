@@ -108,11 +108,13 @@ const HW = {
   "in-memory compute": HW_MATCH("s", String.raw`\b(in-memory comput\w*|compute-in-memory|processing[- ]in[- ]memory|near-memory comput\w*)\b`),
   "space datacenter": HW_MATCH("s", String.raw`\b(space|orbital|orbiting) data ?cent(er|re)s?\b|\bdata ?cent(er|re)s? in (space|orbit)\b`)
 };
+// 記憶體與基礎設施：存資料、搬資料、製造與擺放晶片的東西；其餘是晶片（算的東西）
+const HW_MEM = new Set(["ssd", "nvme", "optane / 3d xpoint", "dram", "hbm", "cxl", "memristor", "in-memory compute", "chiplet", "euv", "photonics", "space datacenter"]);
 const VISIBLE = 15;                     // 與頁面的 VISIBLE 相同
 // 顏色：詞庫比 15 色多，一定要重複用。兩個詞同時在前 15 名（而且都有長條）的月數越多，越不能同色；
 // 越近的月份權重稍高；名次越近權重越高（÷ 名次差的平方），並排的同色最容易搞混。多種起始順序各自用貪婪法排，再換色、互換顏色直到不再改善，取最好的一組。
 // 剩下的撞色會印出來
-function colorsFor(data, labels) {
+function colorsFor(data, labels, name) {
   const n = data.length, months = data[0][1].length, w = Array.from({ length: n }, () => new Array(n).fill(0));
   const onAt = k => data.map((d, i) => [d[1][k], i]).sort((a, b) => b[0] - a[0]).slice(0, VISIBLE).filter(x => x[0] > 0).map(x => x[1]);
   // 比成長時詞進出榜很頻繁，每個月幾乎都有同色，先避開並排的；只偏重最近的月份會讓早年的並排同色變三倍
@@ -152,7 +154,7 @@ function colorsFor(data, labels) {
     for (let k = 0; k < months; k++) { const on = onAt(k); if (on.includes(a) && on.includes(b)) both.push(k); }
     clash.push(`${data[a][0]} ＝ ${data[b][0]}：${both.length} 個月（最後 ${labels[both.at(-1)].slice(0, 4)} 年）`);
   }
-  console.log(`hwHist 同色又同時在榜上：${clash.length ? clash.join("、") : "沒有"}`);
+  console.log(`${name} 同色又同時在榜上：${clash.length ? clash.join("、") : "沒有"}`);
   return best;
 }
 {
@@ -163,12 +165,18 @@ function colorsFor(data, labels) {
                 FROM hackernews_history FINAL
                 WHERE dead = 0 AND deleted = 0 AND type IN ('story','comment') AND time >= toDateTime('${FROM} 00:00:00','UTC')))
     GROUP BY m ORDER BY m`);
-  addSet("hwHist", terms, rows, { from: FROM, least: 1000, per: 1e6, digits: 3 });
-  const { labels, data } = sets.hwHist;
+  addSet("hw", terms, rows, { from: FROM, least: 1000, per: 1e6, digits: 3 });
+  const { labels, data } = sets.hw;
+  delete sets.hw;
   const grown = data.map(([t, v]) => [t, v.slice(GROW_LAG).map((x, k) => +Math.log2((x + GROW_FLOOR) / (v[k] + GROW_FLOOR)).toFixed(3))]);
-  // 倍數每個月都在變、詞進出榜頻繁，播慢一點：每個月 0.6 秒（其他長期排名一共只播一分鐘）
-  sets.hwHist = { labels: labels.slice(GROW_LAG), data: grown, unit: "growth", lag: GROW_LAG, msPerMonth: 600, colors: colorsFor(grown, labels.slice(GROW_LAG)), visible: VISIBLE };
-  console.log(`hwHist：改成 ${GROW_LAG} 個月成長倍數，${sets.hwHist.labels[0]} → ${sets.hwHist.labels.at(-1)}`);
+  // 分兩張：晶片（算的東西）與記憶體和基礎設施（存、搬、造、放的東西）。全放一張時 34 個詞搶 15 格，看不出方向
+  for (const [name, keep] of [["hwHist", t => !HW_MEM.has(t)], ["memHist", t => HW_MEM.has(t)]]) {
+    const part = grown.filter(([t]) => keep(t)), at = labels.slice(GROW_LAG);
+    // 倍數每個月都在變、詞進出榜頻繁，播慢一點：每個月 0.9 秒（其他長期排名一共只播一分鐘）
+    sets[name] = { labels: at, data: part, unit: "growth", lag: GROW_LAG, msPerMonth: 900, colors: colorsFor(part, at, name),
+      ...(part.length > VISIBLE ? { visible: VISIBLE } : {}) };
+    console.log(`${name}：${part.length} 詞，${GROW_LAG} 個月成長倍數，${at[0]} → ${at.at(-1)}`);
+  }
 }
 
 // -------- 徵才：每月「Ask HN: Who is hiring?」底下第一層留言，一則就是一篇徵才文 --------
